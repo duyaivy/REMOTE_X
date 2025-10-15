@@ -22,11 +22,33 @@ public class ReceiveScreen extends JFrame {
      * 
      * @param dataSocket Socket của kênh dữ liệu (port 5000).
      */
-    public ReceiveScreen(Socket dataSocket) {
+    public ReceiveScreen(Socket dataSocket, float width, float height) {
         setTitle("Đang xem màn hình từ xa");
-        setSize(1280, 768);
-        setDefaultCloseOperation(JFrame.DISPOSE_ON_CLOSE); // Đóng cửa sổ này không thoát cả chương trình
+        // kiem tra kich thuoc, hop le, neu nho hon hoạc bang kic thuoc thuc te thi de
+        // nguyen, neu lon hon thi thi nho lai cho dung tile
+
+        Dimension screen = Toolkit.getDefaultToolkit().getScreenSize();
+
+        // Tỉ lệ gốc từ máy remote
+        float aspectRatio = (float) width / (float) height;
+
+        if (width > screen.width || height > screen.height) {
+
+            if (width > screen.width) {
+                width = screen.width;
+                height = (int) (width / aspectRatio);
+            }
+
+            if (height > screen.height) {
+                height = screen.height;
+                width = (int) (height * aspectRatio);
+            }
+        }
+
+        // Đặt kích thước cuối cùng
+        setSize((int) width, (int) height);
         setLocationRelativeTo(null);
+        setDefaultCloseOperation(JFrame.DISPOSE_ON_CLOSE);
 
         screenPanel = new JPanel() {
             @Override

@@ -14,7 +14,7 @@ import server.ShareScreen;
 
 public class MainStart extends JFrame {
 
-    public MainStart() {
+    public MainStart(String ipServer) {
         setTitle("Remote X");
         setSize(800, 500);
         setDefaultCloseOperation(EXIT_ON_CLOSE);
@@ -27,10 +27,9 @@ public class MainStart extends JFrame {
         gbc.insets = new Insets(5, 5, 5, 5);
         gbc.anchor = GridBagConstraints.WEST;
         gbc.fill = GridBagConstraints.HORIZONTAL;
-
+        Dimension screen = Toolkit.getDefaultToolkit().getScreenSize();
         JLabel lblIDBan = new JLabel("ID của bạn");
         JTextField txtIDBan = new JTextField("", 15);
-
         JLabel lblMatKhau = new JLabel("Mật khẩu");
         JTextField txtMatKhau = new JTextField("", 15);
 
@@ -52,14 +51,15 @@ public class MainStart extends JFrame {
                     protected Void doInBackground() throws Exception {
                         try {
                             // Toàn bộ code mạng nằm ở đây
-                            socketScreen = new Socket("localhost", 5000);
-                            socketControl = new Socket("localhost", 6000);
+                            socketScreen = new Socket(ipServer, 5000);
+                            socketControl = new Socket(ipServer, 6000);
 
-                            String initMessage = username + "," + password + ",sharer";
+                            String initMessage = username + "," + password + ",sharer" + "," + screen.getWidth() + ","
+                                    + screen.getHeight();
                             DataOutputStream dosScreen = new DataOutputStream(socketScreen.getOutputStream());
                             DataOutputStream dosControl = new DataOutputStream(socketControl.getOutputStream());
-                            dosScreen.writeUTF(initMessage);
-                            dosControl.writeUTF(initMessage);
+                            dosScreen.writeUTF(initMessage + ",screen");
+                            dosControl.writeUTF(initMessage + ",control");
                             dosScreen.flush();
                             dosControl.flush();
 
@@ -178,18 +178,21 @@ public class MainStart extends JFrame {
             SwingWorker<Void, Void> controlWorker = new SwingWorker<Void, Void>() {
                 private Socket socketScreen;
                 private Socket socketControl;
+                private float remoteWidth;
+                private float remoteHeight;
 
                 @Override
                 protected Void doInBackground() throws Exception {
                     try {
-                        socketScreen = new Socket("localhost", 5000);
-                        socketControl = new Socket("localhost", 6000);
+                        socketScreen = new Socket(ipServer, 5000);
+                        socketControl = new Socket(ipServer, 6000);
 
-                        String initMessage = partnerID + "," + partnerPassword + ",viewer";
+                        String initMessage = partnerID + "," + partnerPassword + ",viewer," + screen.getWidth() + ","
+                                + screen.getHeight();
                         DataOutputStream dosScreen = new DataOutputStream(socketScreen.getOutputStream());
                         DataOutputStream dosControl = new DataOutputStream(socketControl.getOutputStream());
-                        dosScreen.writeUTF(initMessage);
-                        dosControl.writeUTF(initMessage);
+                        dosScreen.writeUTF(initMessage + ",screen");
+                        dosControl.writeUTF(initMessage + ",control");
                         dosScreen.flush();
                         dosControl.flush();
 
@@ -201,6 +204,12 @@ public class MainStart extends JFrame {
                         if (responseScreen.startsWith("false") || responseControl.startsWith("false")) {
                             throw new Exception("Server response: " + responseScreen);
                         }
+                        String[] res = responseScreen.split(",");
+                        if (res.length < 3) {
+                            throw new Exception("Lỗi dữ liệu trả về: " + responseScreen);
+                        }
+                        remoteWidth = Float.parseFloat(res[1]);
+                        remoteHeight = Float.parseFloat(res[2]);
 
                     } catch (Exception ex) {
                         try {
@@ -221,16 +230,9 @@ public class MainStart extends JFrame {
                 @Override
                 protected void done() {
                     try {
-                        get(); // Check for exceptions from doInBackground()
+                        get();
                         JOptionPane.showMessageDialog(MainStart.this, "Kết nối thành công! Bắt đầu điều khiển.");
-
-                        // Tạo cửa sổ nhận màn hình và truyền socket data vào
-                        // Nó sẽ tự chạy và hiển thị
-                        new ReceiveScreen(socketScreen);
-
-                        // Bạn cũng có thể tạo lớp xử lý điều khiển và truyền socket control vào
-                        // new ControlHandler(socketControl);
-
+                        new ReceiveScreen(socketScreen, remoteWidth, remoteHeight);
                     } catch (Exception ex) {
                         ex.printStackTrace();
                         JOptionPane.showMessageDialog(MainStart.this,
@@ -266,7 +268,8 @@ public class MainStart extends JFrame {
 
         SwingUtilities.invokeLater(() -> {
             try {
-                MainStart main = new MainStart();
+                String ipServer = "localhost";
+                MainStart main = new MainStart(ipServer);
                 main.setVisible(true);
             } catch (Exception e) {
                 e.printStackTrace();
