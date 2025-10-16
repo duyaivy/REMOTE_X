@@ -3,6 +3,7 @@ package server;
 import java.awt.Robot;
 import java.io.DataInputStream;
 import java.net.Socket;
+import java.awt.event.InputEvent;
 
 public class ReceiveEvent extends Thread {
     private DataInputStream dis;
@@ -33,10 +34,16 @@ public class ReceiveEvent extends Thread {
                 int command = Integer.parseInt(parts[0]);
                 switch (command) {
                     case -1:
-                        robot.mousePress(Integer.parseInt(parts[1]));
+                        int buttonMask = getButtonMask(Integer.parseInt(parts[1]));
+                        if (buttonMask != 0) {
+                            robot.mousePress(buttonMask);
+                        }
                         break;
                     case -2: {
-                        robot.mouseRelease(Integer.parseInt(parts[1]));
+                        int releaseMask = getButtonMask(Integer.parseInt(parts[1]));
+                        if (releaseMask != 0) {
+                            robot.mouseRelease(releaseMask);
+                        }
                         break;
                     }
                     case -3:
@@ -54,6 +61,7 @@ public class ReceiveEvent extends Thread {
                         break;
                     }
                     case -6:
+
                         robot.mousePress(Integer.parseInt(parts[1]));
                         robot.mouseRelease(Integer.parseInt(parts[1]));
                         break;
@@ -78,4 +86,16 @@ public class ReceiveEvent extends Thread {
 
     }
 
+    public int getButtonMask(int button) {
+        switch (button) {
+            case 1:
+                return InputEvent.BUTTON1_DOWN_MASK;
+            case 2:
+                return InputEvent.BUTTON2_DOWN_MASK;
+            case 3:
+                return InputEvent.BUTTON3_DOWN_MASK;
+            default:
+                return 0;
+        }
+    }
 }
