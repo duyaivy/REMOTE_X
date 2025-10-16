@@ -23,29 +23,21 @@ public class ReceiveScreen extends JFrame {
      * @param dataSocket Socket của kênh dữ liệu (port 5000).
      */
     public ReceiveScreen(Socket dataSocket, float width, float height, Socket controlSocket) {
-        setTitle("Đang xem màn hình từ xa");
+        setTitle("RemoteX Screen Viewer");
         // kiem tra kich thuoc, hop le, neu nho hon hoạc bang kic thuoc thuc te thi de
         // nguyen, neu lon hon thi thi nho lai cho dung tile
+        Dimension screenSize = Toolkit.getDefaultToolkit().getScreenSize();
 
-        Dimension screen = Toolkit.getDefaultToolkit().getScreenSize();
-
-        // Tỉ lệ gốc từ máy remote
-        float aspectRatio = (float) width / (float) height;
-
-        if (width > screen.width || height > screen.height) {
-
-            if (width > screen.width) {
-                width = screen.width;
-                height = (int) (width / aspectRatio);
-            }
-
-            if (height > screen.height) {
-                height = screen.height;
-                width = (int) (height * aspectRatio);
-            }
+        double remoteWidth = width;
+        double remoteHeight = height;
+        if (remoteWidth > screenSize.width || remoteHeight > screenSize.height) {
+            double widthRatio = screenSize.width / remoteWidth;
+            double heightRatio = screenSize.height / remoteHeight;
+            double scaleFactor = Math.min(widthRatio, heightRatio);
+            width = (int) (remoteWidth * scaleFactor);
+            height = (int) (remoteHeight * scaleFactor);
         }
 
-        // Đặt kích thước cuối cùng
         setSize((int) width, (int) height);
         setLocationRelativeTo(null);
         setDefaultCloseOperation(JFrame.DISPOSE_ON_CLOSE);
@@ -58,7 +50,7 @@ public class ReceiveScreen extends JFrame {
                 if (currentImage != null) {
                     g.drawImage(currentImage, 0, 0, getWidth(), getHeight(), null);
                 }
-                // Hoặc vẽ thông báo trạng thái/lỗi
+
                 else {
                     g.setColor(Color.BLACK);
                     g.fillRect(0, 0, getWidth(), getHeight());
@@ -126,8 +118,9 @@ public class ReceiveScreen extends JFrame {
     private void processDeltaFrame(DataInputStream in) throws IOException {
         int x = in.readInt();
         int y = in.readInt();
-        int w = in.readInt();
-        int h = in.readInt();
+        int width = in.readInt();
+        int height = in.readInt();
+
         int dataLength = in.readInt();
         byte[] frameData = new byte[dataLength];
         in.readFully(frameData);
