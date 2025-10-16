@@ -105,6 +105,12 @@ public class ShareScreen implements Runnable {
                 while (!Thread.currentThread().isInterrupted()) {
                     try {
                         BufferedImage screen = robot.createScreenCapture(screenRect);
+                        PointerInfo pointerInfo = MouseInfo.getPointerInfo();
+                        Point mousePos = pointerInfo.getLocation();
+                        Graphics2D g2 = screen.createGraphics();
+                        g2.setColor(Color.RED);
+                        g2.fillOval(mousePos.x - 5, mousePos.y - 5, 10, 10); // vẽ chấm tròn
+                        g2.dispose();
                         latestFrame.set(new ScreenFrame(screen, ++sequence));
                         Thread.sleep(1000 / fps);
                     } catch (InterruptedException e) {

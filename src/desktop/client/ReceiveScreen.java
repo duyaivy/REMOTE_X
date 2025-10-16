@@ -22,7 +22,7 @@ public class ReceiveScreen extends JFrame {
      * 
      * @param dataSocket Socket của kênh dữ liệu (port 5000).
      */
-    public ReceiveScreen(Socket dataSocket, float width, float height) {
+    public ReceiveScreen(Socket dataSocket, float width, float height, Socket controlSocket) {
         setTitle("Đang xem màn hình từ xa");
         // kiem tra kich thuoc, hop le, neu nho hon hoạc bang kic thuoc thuc te thi de
         // nguyen, neu lon hon thi thi nho lai cho dung tile
@@ -74,6 +74,7 @@ public class ReceiveScreen extends JFrame {
 
         // Bắt đầu một luồng mới để nhận khung hình
         new Thread(() -> receiveFrames(dataSocket)).start();
+        new ControlEvent(controlSocket, screenPanel);
     }
 
     private void receiveFrames(Socket socket) {
