@@ -10,6 +10,8 @@ import java.awt.*;
 import java.io.DataInputStream;
 import java.io.DataOutputStream;
 import java.net.Socket;
+
+import server.ReceiveEvent;
 import server.ShareScreen;
 
 public class MainStart extends JFrame {
@@ -46,6 +48,8 @@ public class MainStart extends JFrame {
                 SwingWorker<Void, Void> worker = new SwingWorker<Void, Void>() {
                     private Socket socketScreen;
                     private Socket socketControl;
+                    private GraphicsEnvironment gEnv = GraphicsEnvironment.getLocalGraphicsEnvironment();
+                    private GraphicsDevice gDev = gEnv.getDefaultScreenDevice();
 
                     @Override
                     protected Void doInBackground() throws Exception {
@@ -93,10 +97,9 @@ public class MainStart extends JFrame {
                     @Override
                     protected void done() {
                         try {
-                            get(); // Kiểm tra exception từ doInBackground()
+                            get();
                             JOptionPane.showMessageDialog(MainStart.this, "Kết nối thành công! Bắt đầu chia sẻ.");
 
-                            // Khởi tạo ShareScreen trong thread riêng
                             new Thread(() -> {
                                 try {
                                     new ShareScreen(socketScreen);
@@ -108,6 +111,9 @@ public class MainStart extends JFrame {
                                     });
                                 }
                             }).start();
+                            // Create
+                            Robot rb = new Robot(gDev);
+                            new ReceiveEvent(socketControl, rb, screen.height, screen.width);
 
                         } catch (Exception ex) {
                             ex.printStackTrace();
@@ -232,7 +238,7 @@ public class MainStart extends JFrame {
                     try {
                         get();
                         JOptionPane.showMessageDialog(MainStart.this, "Kết nối thành công! Bắt đầu điều khiển.");
-                        new ReceiveScreen(socketScreen, remoteWidth, remoteHeight);
+                        new ReceiveScreen(socketScreen, remoteWidth, remoteHeight, socketControl);
                     } catch (Exception ex) {
                         ex.printStackTrace();
                         JOptionPane.showMessageDialog(MainStart.this,

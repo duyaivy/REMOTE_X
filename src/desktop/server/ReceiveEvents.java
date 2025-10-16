@@ -23,7 +23,6 @@ public class ReceiveEvents extends Thread {
         Scanner scanner = null;
         try {
             scanner = new Scanner(socket.getInputStream());
-
             while (continueLoop) {
                 int command = scanner.nextInt();
                 switch (command) {
