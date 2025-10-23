@@ -1,4 +1,3 @@
-
 package main;
 
 import javax.swing.*;
@@ -15,6 +14,9 @@ import server.ReceiveEvent;
 import server.ShareScreen;
 
 public class MainStart extends JFrame {
+
+    // Giả sử port chat của serverRelay là 7000
+    private static final int CHAT_PORT = 7000;
 
     public MainStart(String ipServer) {
         setTitle("Remote X");
@@ -48,6 +50,7 @@ public class MainStart extends JFrame {
                 SwingWorker<Void, Void> worker = new SwingWorker<Void, Void>() {
                     private Socket socketScreen;
                     private Socket socketControl;
+                    private Socket socketChat; // <-- THÊM MỚI
                     private GraphicsEnvironment gEnv = GraphicsEnvironment.getLocalGraphicsEnvironment();
                     private GraphicsDevice gDev = gEnv.getDefaultScreenDevice();
 
@@ -57,38 +60,42 @@ public class MainStart extends JFrame {
                             // Toàn bộ code mạng nằm ở đây
                             socketScreen = new Socket(ipServer, 5000);
                             socketControl = new Socket(ipServer, 6000);
+                            socketChat = new Socket(ipServer, CHAT_PORT); // <-- THÊM MỚI
 
-                            String initMessage = username + "," + password + ",sharer" + "," + screen.getWidth() + ","
+                            String initMessage = username + "," + password + ",sharer," + screen.getWidth() + ","
                                     + screen.getHeight();
+                            
                             DataOutputStream dosScreen = new DataOutputStream(socketScreen.getOutputStream());
                             DataOutputStream dosControl = new DataOutputStream(socketControl.getOutputStream());
+                            DataOutputStream dosChat = new DataOutputStream(socketChat.getOutputStream()); // <-- THÊM MỚI
+
                             dosScreen.writeUTF(initMessage + ",screen");
                             dosControl.writeUTF(initMessage + ",control");
+                            dosChat.writeUTF(initMessage + ",chat"); // <-- THÊM MỚI
+                            
                             dosScreen.flush();
                             dosControl.flush();
+                            dosChat.flush(); // <-- THÊM MỚI
 
                             DataInputStream disScreen = new DataInputStream(socketScreen.getInputStream());
                             DataInputStream disControl = new DataInputStream(socketControl.getInputStream());
+                            DataInputStream disChat = new DataInputStream(socketChat.getInputStream()); // <-- THÊM MỚI
+
                             String responseScreen = disScreen.readUTF();
                             String responseControl = disControl.readUTF();
+                            String responseChat = disChat.readUTF(); // <-- THÊM MỚI
 
                             // Kiểm tra response từ server
-                            if (responseScreen.startsWith("false") || responseControl.startsWith("false")) {
-                                throw new Exception("Server response: " + responseScreen);
+                            // <-- SỬA LẠI: Thêm responseChat
+                            if (responseScreen.startsWith("false") || responseControl.startsWith("false") || responseChat.startsWith("false")) {
+                                throw new Exception("Server response: " + responseScreen + " | " + responseControl + " | " + responseChat);
                             }
 
                         } catch (Exception e) {
                             // Đóng socket nếu có lỗi
-                            try {
-                                if (socketScreen != null)
-                                    socketScreen.close();
-                            } catch (Exception ex) {
-                            }
-                            try {
-                                if (socketControl != null)
-                                    socketControl.close();
-                            } catch (Exception ex) {
-                            }
+                            try { if (socketScreen != null) socketScreen.close(); } catch (Exception ex) {}
+                            try { if (socketControl != null) socketControl.close(); } catch (Exception ex) {}
+                            try { if (socketChat != null) socketChat.close(); } catch (Exception ex) {} // <-- THÊM MỚI
                             throw e; // Re-throw để xử lý trong done()
                         }
                         return null;
@@ -102,7 +109,8 @@ public class MainStart extends JFrame {
 
                             new Thread(() -> {
                                 try {
-                                    new ShareScreen(socketScreen);
+                                    // <-- SỬA LẠI: Truyền socketChat vào
+                                    new ShareScreen(socketScreen, socketChat);
                                 } catch (Exception ex) {
                                     SwingUtilities.invokeLater(() -> {
                                         JOptionPane.showMessageDialog(MainStart.this,
@@ -122,16 +130,9 @@ public class MainStart extends JFrame {
                                     JOptionPane.ERROR_MESSAGE);
 
                             // Đóng socket nếu chúng đã được mở
-                            try {
-                                if (socketScreen != null)
-                                    socketScreen.close();
-                            } catch (Exception e) {
-                            }
-                            try {
-                                if (socketControl != null)
-                                    socketControl.close();
-                            } catch (Exception e) {
-                            }
+                            try { if (socketScreen != null) socketScreen.close(); } catch (Exception e) {}
+                            try { if (socketControl != null) socketControl.close(); } catch (Exception e) {}
+                            try { if (socketChat != null) socketChat.close(); } catch (Exception e) {} // <-- THÊM MỚI
 
                         } finally {
                             btnStartShare.setEnabled(true);
@@ -184,6 +185,7 @@ public class MainStart extends JFrame {
             SwingWorker<Void, Void> controlWorker = new SwingWorker<Void, Void>() {
                 private Socket socketScreen;
                 private Socket socketControl;
+                private Socket socketChat; // <-- THÊM MỚI
                 private float remoteWidth;
                 private float remoteHeight;
 
@@ -192,24 +194,36 @@ public class MainStart extends JFrame {
                     try {
                         socketScreen = new Socket(ipServer, 5000);
                         socketControl = new Socket(ipServer, 6000);
+                        socketChat = new Socket(ipServer, CHAT_PORT); // <-- THÊM MỚI
 
                         String initMessage = partnerID + "," + partnerPassword + ",viewer," + screen.getWidth() + ","
                                 + screen.getHeight();
+                        
                         DataOutputStream dosScreen = new DataOutputStream(socketScreen.getOutputStream());
                         DataOutputStream dosControl = new DataOutputStream(socketControl.getOutputStream());
+                        DataOutputStream dosChat = new DataOutputStream(socketChat.getOutputStream()); // <-- THÊM MỚI
+
                         dosScreen.writeUTF(initMessage + ",screen");
                         dosControl.writeUTF(initMessage + ",control");
+                        dosChat.writeUTF(initMessage + ",chat"); // <-- THÊM MỚI
+
                         dosScreen.flush();
                         dosControl.flush();
+                        dosChat.flush(); // <-- THÊM MỚI
 
                         DataInputStream disScreen = new DataInputStream(socketScreen.getInputStream());
                         DataInputStream disControl = new DataInputStream(socketControl.getInputStream());
+                        DataInputStream disChat = new DataInputStream(socketChat.getInputStream()); // <-- THÊM MỚI
+
                         String responseScreen = disScreen.readUTF();
                         String responseControl = disControl.readUTF();
+                        String responseChat = disChat.readUTF(); // <-- THÊM MỚI
 
-                        if (responseScreen.startsWith("false") || responseControl.startsWith("false")) {
-                            throw new Exception("Server response: " + responseScreen);
+                        // <-- SỬA LẠI: Thêm responseChat
+                        if (responseScreen.startsWith("false") || responseControl.startsWith("false") || responseChat.startsWith("false")) {
+                            throw new Exception("Server response: " + responseScreen + " | " + responseControl + " | " + responseChat);
                         }
+                        
                         String[] res = responseScreen.split(",");
                         if (res.length < 3) {
                             throw new Exception("Lỗi dữ liệu trả về: " + responseScreen);
@@ -218,16 +232,9 @@ public class MainStart extends JFrame {
                         remoteHeight = Float.parseFloat(res[2]);
 
                     } catch (Exception ex) {
-                        try {
-                            if (socketScreen != null)
-                                socketScreen.close();
-                        } catch (Exception e) {
-                        }
-                        try {
-                            if (socketControl != null)
-                                socketControl.close();
-                        } catch (Exception e) {
-                        }
+                        try { if (socketScreen != null) socketScreen.close(); } catch (Exception e) {}
+                        try { if (socketControl != null) socketControl.close(); } catch (Exception e) {}
+                        try { if (socketChat != null) socketChat.close(); } catch (Exception e) {} // <-- THÊM MỚI
                         throw ex;
                     }
                     return null;
@@ -238,7 +245,8 @@ public class MainStart extends JFrame {
                     try {
                         get();
                         JOptionPane.showMessageDialog(MainStart.this, "Kết nối thành công! Bắt đầu điều khiển.");
-                        new ReceiveScreen(socketScreen, remoteWidth, remoteHeight, socketControl);
+                        // <-- SỬA LẠI: Truyền socketChat vào
+                        new ReceiveScreen(socketScreen, remoteWidth, remoteHeight, socketControl, socketChat);
                     } catch (Exception ex) {
                         ex.printStackTrace();
                         JOptionPane.showMessageDialog(MainStart.this,
@@ -274,7 +282,14 @@ public class MainStart extends JFrame {
 
         SwingUtilities.invokeLater(() -> {
             try {
-                String ipServer = "localhost";
+                // <-- LƯU Ý QUAN TRỌNG: Tôi đã sửa "" thành "localhost"
+                // Bạn phải đổi "localhost" thành IP của serverRelay khi chạy thật
+            	// nếu cùng mạng wf thì hắn cũng phải có dạng ip là 172.x.x.x chớ, cá ni làm sai r nè,.  vidu đây là máy chạy servẻ thì cái main start đặt localhost cũng được 
+                
+            	// qua máy bên kia nhập ip vô như cái bên dưới
+            	// qua máy bên kia nhập đúng ip vô chạy r test thử hì, có chi nt nghe
+            	String ipServer = "localhost"; 
+//            	String ipServer = "localhost"; 
                 MainStart main = new MainStart(ipServer);
                 main.setVisible(true);
             } catch (Exception e) {

@@ -1,8 +1,11 @@
 package client;
 
-import javax.imageio.ImageIO;
+// --- CÁC IMPORT THÊM VÀO ---
+import common.ChatWindow; // <-- Đảm bảo import đúng package
 import javax.swing.*;
 import java.awt.*;
+//... (các import khác của bạn) ...
+import javax.imageio.ImageIO;
 import java.awt.image.BufferedImage;
 import java.io.ByteArrayInputStream;
 import java.io.DataInputStream;
@@ -16,16 +19,19 @@ public class ReceiveScreen extends JFrame {
     private volatile String statusMessage = "Đang kết nối tới server...";
 
     private final JPanel screenPanel;
+    
+    // --- THÊM MỚI: Biến để giữ tham chiếu đến cửa sổ chat ---
+    private ChatWindow chatWindow; 
 
     /**
      * Constructor nhận vào socket đã được kết nối sẵn từ MainStart.
-     * 
-     * @param dataSocket Socket của kênh dữ liệu (port 5000).
+     * * @param dataSocket    Socket của kênh dữ liệu (port 5000).
+     * @param controlSocket Socket của kênh điều khiển (port 6000).
+     * @param chatSocket    Socket của kênh chat (port 7000).
      */
-    public ReceiveScreen(Socket dataSocket, float width, float height, Socket controlSocket) {
+    public ReceiveScreen(Socket dataSocket, float width, float height, Socket controlSocket, Socket chatSocket) {
         setTitle("RemoteX Screen Viewer");
-        // kiem tra kich thuoc, hop le, neu nho hon hoạc bang kic thuoc thuc te thi de
-        // nguyen, neu lon hon thi thi nho lai cho dung tile
+        // ... (Toàn bộ code setSize, setLocation, tính toán kích thước... của bạn giữ nguyên) ...
         Dimension screenSize = Toolkit.getDefaultToolkit().getScreenSize();
 
         double remoteWidth = width;
@@ -46,12 +52,10 @@ public class ReceiveScreen extends JFrame {
             @Override
             protected void paintComponent(Graphics g) {
                 super.paintComponent(g);
-                // Vẽ ảnh nhận được
+                // ... (code paintComponent của bạn, không đổi) ...
                 if (currentImage != null) {
                     g.drawImage(currentImage, 0, 0, getWidth(), getHeight(), null);
-                }
-
-                else {
+                } else {
                     g.setColor(Color.BLACK);
                     g.fillRect(0, 0, getWidth(), getHeight());
                     g.setColor(Color.WHITE);
@@ -62,12 +66,46 @@ public class ReceiveScreen extends JFrame {
         };
 
         add(screenPanel);
-        setVisible(true);
+
+        // ----------------------------------------------------
+        // ---- PHẦN SỬA ĐỔI ĐỂ GIỐNG ULTRAVIEW ----
+        // ----------------------------------------------------
+        
+        // 1. Khởi tạo ChatWindow ở chế độ chạy ngầm (KHÔNG hiển thị)
+        // Bỏ SwingUtilities.invokeLater
+        this.chatWindow = new ChatWindow(chatSocket, "Server");
+
+        // 2. Tạo Menu Bar
+        JMenuBar menuBar = new JMenuBar();
+        JMenu toolsMenu = new JMenu("Công cụ");
+        JMenuItem chatMenuItem = new JMenuItem("Mở Chat");
+        
+        // 3. Thêm hành động khi bấm nút
+        chatMenuItem.addActionListener(e -> {
+            // Chỉ cần gọi hàm showWindow()
+            if (this.chatWindow != null) {
+                this.chatWindow.showWindow();
+            }
+        });
+
+        toolsMenu.add(chatMenuItem);
+        menuBar.add(toolsMenu);
+        
+        // 4. Thêm Menu Bar vào JFrame này
+        this.setJMenuBar(menuBar);
+
+        // ----------------------------------------------------
+        
+        // 5. Dời setVisible(true) xuống sau khi thêm menu
+        setVisible(true); 
 
         // Bắt đầu một luồng mới để nhận khung hình
         new Thread(() -> receiveFrames(dataSocket)).start();
         new ControlEvent(controlSocket, screenPanel);
     }
+    
+    // ... (Toàn bộ các hàm receiveFrames, processFullFrame, processDeltaFrame của bạn giữ nguyên) ...
+    // ... (Không cần thay đổi gì ở các hàm bên dưới) ...
 
     private void receiveFrames(Socket socket) {
         try (DataInputStream in = new DataInputStream(socket.getInputStream())) {

@@ -1,5 +1,10 @@
-
 package server;
+
+// --- CÁC IMPORT THÊM VÀO ---
+import javax.swing.SwingUtilities;
+// Giả sử bạn đã tạo ChatWindow trong package 'common'
+import common.ChatWindow; 
+// --- HẾT PHẦN IMPORT THÊM ---
 
 import javax.imageio.IIOImage;
 import javax.imageio.ImageIO;
@@ -23,14 +28,29 @@ public class ShareScreen implements Runnable {
 
     private int lastSentSeq = -1;
     private BufferedImage lastSentImage = null;
-    private Socket socket = null;
+    
+    private Socket screenSocket = null; 
 
-    public ShareScreen(Socket sv) throws Exception {
-        this.socket = sv;
-        // Khởi tạo và chạy thread
+    // --- Biến mới để giữ tham chiếu ChatWindow ---
+    private ChatWindow chatWindow;
+
+    // ----------------------------------------------------
+    // ---- HÀM KHỞI TẠO ĐÃ SỬA ----
+    // ----------------------------------------------------
+    public ShareScreen(Socket screenSocket, Socket chatSocket) throws Exception {
+        this.screenSocket = screenSocket;
+        
+        // Khởi tạo và chạy thread chia sẻ màn hình
         Thread shareThread = new Thread(this);
         shareThread.setDaemon(true);
         shareThread.start();
+        
+        // 1. Khởi tạo ChatWindow (chạy ngầm) và LƯU NÓ LẠI
+        this.chatWindow = new ChatWindow(chatSocket, "Client");
+        
+        // 2. TẠO NÚT BẤM "Chat" ẩn
+        //    (Giả sử bạn đã tạo file server/ChatToggleButton.java)
+        new ChatToggleButton(this.chatWindow);
     }
 
     @Override
@@ -38,8 +58,9 @@ public class ShareScreen implements Runnable {
         try {
             new Thread(new CaptureTask()).start();
 
-            try (DataOutputStream out = new DataOutputStream(socket.getOutputStream())) {
-                System.out.println("ip: " + socket.getInetAddress());
+            // Sửa `socket` thành `screenSocket`
+            try (DataOutputStream out = new DataOutputStream(screenSocket.getOutputStream())) {
+                System.out.println("ip: " + screenSocket.getInetAddress());
                 ScreenFrame firstFrame;
                 while ((firstFrame = latestFrame.get()) == null) {
                     Thread.sleep(100);
@@ -48,7 +69,8 @@ public class ShareScreen implements Runnable {
                 out.writeInt(firstFrame.rawImage.getHeight());
 
                 sendFullFrame(out, firstFrame);
-                while (!socket.isClosed()) {
+                // Sửa `socket` thành `screenSocket`
+                while (!screenSocket.isClosed()) {
                     ScreenFrame currentFrame = latestFrame.get();
                     if (currentFrame != null && currentFrame.sequence > lastSentSeq) {
                         Rectangle changeBox = findChangeBoundingBox(lastSentImage, currentFrame.rawImage);
@@ -65,15 +87,17 @@ public class ShareScreen implements Runnable {
                     Thread.sleep(1000 / fps);
                 }
             } catch (IOException e) {
-                System.out.println("Client disconnected: " + socket.getInetAddress());
+                // Sửa `socket` thành `screenSocket`
+                System.out.println("Client disconnected: " + screenSocket.getInetAddress());
             }
         } catch (Exception e) {
             System.err.println("ShareScreen error: " + e.getMessage());
             e.printStackTrace();
         } finally {
             try {
-                if (socket != null && !socket.isClosed()) {
-                    socket.close();
+                // Sửa `socket` thành `screenSocket`
+                if (screenSocket != null && !screenSocket.isClosed()) {
+                    screenSocket.close();
                 }
             } catch (IOException e) {
                 System.err.println("Error closing socket: " + e.getMessage());
@@ -135,7 +159,7 @@ public class ShareScreen implements Runnable {
         this.lastSentSeq = frame.sequence;
         if (frame.sequence % 30 == 0) {
             System.out.println("FULL " + frame.sequence + " (" + compressedData.length / 1024 + " KB) cho "
-                    + socket.getInetAddress());
+                    + screenSocket.getInetAddress());
         }
     }
 
@@ -160,17 +184,16 @@ public class ShareScreen implements Runnable {
         this.lastSentSeq = frame.sequence;
         if (frame.sequence % 30 == 0) {
             System.out.println("DELTA " + frame.sequence + " (" + compressedData.length / 1024 + " KB) cho "
-                    + socket.getInetAddress());
+                    + screenSocket.getInetAddress());
         }
     }
-
-    /**
-     * Nén một ảnh BufferedImage thành mảng byte JPEG với chất lượng cho trước.
-     */
+    
+    // Các hàm compressImage, findChangeBoundingBox, isBlockSame không thay đổi...
     private byte[] compressImage(BufferedImage image, float quality) throws IOException {
         ByteArrayOutputStream baos = new ByteArrayOutputStream();
         ImageWriter writer = ImageIO.getImageWritersByFormatName("jpg").next();
         ImageWriteParam param = writer.getDefaultWriteParam();
+     // SỬA LẠI:
         param.setCompressionMode(ImageWriteParam.MODE_EXPLICIT);
         param.setCompressionQuality(quality);
 
