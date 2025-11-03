@@ -1,0 +1,69 @@
+{
+  "version": "1.0",
+  "description": "Java Preprocessing Guide for Anomaly Detection",
+  "preprocessing_steps": [
+    {
+      "step": 1,
+      "name": "Extract Time Features",
+      "description": "Parse timestamp and extract hour, weekday, sin/cos encoding",
+      "example": {
+        "input": "2025-01-15T14:30:00",
+        "output": {
+          "hour": 14,
+          "weekday": 2,
+          "is_weekend": 0,
+          "is_night": 0,
+          "is_business_hours": 1,
+          "hour_sin": "sin(2*PI*14/24)",
+          "hour_cos": "cos(2*PI*14/24)"
+        }
+      }
+    },
+    {
+      "step": 2,
+      "name": "Label Encoding",
+      "description": "Encode user, process_name, parent_name using label_encoders.json",
+      "example": {
+        "input": "DESKTOP\\user1",
+        "lookup": "label_encoders.json[user]",
+        "output": "encoded_value or 0 if not found"
+      }
+    },
+    {
+      "step": 3,
+      "name": "Rule-based Features",
+      "description": "Check suspicious patterns",
+      "example": {
+        "is_suspicious_process": "Check if process_name in SUSPICIOUS_PROCESSES",
+        "suspicious_cmdline_count": "Count patterns from SUSPICIOUS_CMDLINE_PATTERNS",
+        "is_suspicious_parent_child": "Check (parent, child) pair"
+      }
+    },
+    {
+      "step": 4,
+      "name": "TF-IDF Vectorization",
+      "description": "Transform text to TF-IDF vectors",
+      "formula": "tfidf = tf * idf",
+      "note": "Use vocabulary and idf values from tfidf_image.json and tfidf_cmdline.json"
+    },
+    {
+      "step": 5,
+      "name": "Feature Combining",
+      "description": "Combine all features in correct order from feature_names",
+      "order": "Must match feature_metadata.json[feature_names]"
+    },
+    {
+      "step": 6,
+      "name": "Standardization",
+      "description": "Apply StandardScaler: (x - mean) / scale",
+      "formula": "scaled_value = (value - scaler.mean[i]) / scaler.scale[i]"
+    }
+  ],
+  "performance_tips": [
+    "Cache TF-IDF vectors for common processes",
+    "Pre-compute sin/cos lookup tables",
+    "Use thread-safe cache for label encoding",
+    "Batch processing for multiple events",
+    "Reuse ONNX session across predictions"
+  ]
+}
