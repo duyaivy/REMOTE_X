@@ -1,7 +1,6 @@
 package server;
 
-import javax.swing.SwingUtilities;
-import common.ChatWindow; 
+import common.ChatWindow;
 import javax.imageio.IIOImage;
 import javax.imageio.ImageIO;
 import javax.imageio.ImageWriteParam;
@@ -24,28 +23,16 @@ public class ShareScreen implements Runnable {
 
     private int lastSentSeq = -1;
     private BufferedImage lastSentImage = null;
-    
-    private Socket screenSocket = null; 
 
-    // --- Biến mới để giữ tham chiếu ChatWindow ---
+    private Socket screenSocket = null;
     private ChatWindow chatWindow;
 
-    // ----------------------------------------------------
-    // ---- HÀM KHỞI TẠO ĐÃ SỬA ----
-    // ----------------------------------------------------
     public ShareScreen(Socket screenSocket, Socket chatSocket) throws Exception {
         this.screenSocket = screenSocket;
-        
-        // Khởi tạo và chạy thread chia sẻ màn hình
         Thread shareThread = new Thread(this);
         shareThread.setDaemon(true);
         shareThread.start();
-        
-        // 1. Khởi tạo ChatWindow (chạy ngầm) và LƯU NÓ LẠI
         this.chatWindow = new ChatWindow(chatSocket, "Client");
-        
-        // 2. TẠO NÚT BẤM "Chat" ẩn
-        //    (Giả sử bạn đã tạo file server/ChatToggleButton.java)
         new ChatToggleButton(this.chatWindow);
     }
 
@@ -53,8 +40,6 @@ public class ShareScreen implements Runnable {
     public void run() {
         try {
             new Thread(new CaptureTask()).start();
-
-            // Sửa `socket` thành `screenSocket`
             try (DataOutputStream out = new DataOutputStream(screenSocket.getOutputStream())) {
                 System.out.println("ip: " + screenSocket.getInetAddress());
                 ScreenFrame firstFrame;
@@ -65,7 +50,6 @@ public class ShareScreen implements Runnable {
                 out.writeInt(firstFrame.rawImage.getHeight());
 
                 sendFullFrame(out, firstFrame);
-                // Sửa `socket` thành `screenSocket`
                 while (!screenSocket.isClosed()) {
                     ScreenFrame currentFrame = latestFrame.get();
                     if (currentFrame != null && currentFrame.sequence > lastSentSeq) {
@@ -183,13 +167,13 @@ public class ShareScreen implements Runnable {
                     + screenSocket.getInetAddress());
         }
     }
-    
+
     // Các hàm compressImage, findChangeBoundingBox, isBlockSame không thay đổi...
     private byte[] compressImage(BufferedImage image, float quality) throws IOException {
         ByteArrayOutputStream baos = new ByteArrayOutputStream();
         ImageWriter writer = ImageIO.getImageWritersByFormatName("jpg").next();
         ImageWriteParam param = writer.getDefaultWriteParam();
-     // SỬA LẠI:
+        // SỬA LẠI:
         param.setCompressionMode(ImageWriteParam.MODE_EXPLICIT);
         param.setCompressionQuality(quality);
 

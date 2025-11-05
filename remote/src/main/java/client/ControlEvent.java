@@ -76,7 +76,7 @@ public class ControlEvent implements MouseListener, MouseMotionListener, MouseWh
 
     @Override
     public void mouseDragged(MouseEvent e) {
-        // Throttling
+
         long currentTime = System.currentTimeMillis();
         if (currentTime - lastMouseDragTime < MOUSE_DRAG_DELAY) {
             return;
@@ -99,10 +99,10 @@ public class ControlEvent implements MouseListener, MouseMotionListener, MouseWh
 
     @Override
     public void mouseMoved(MouseEvent e) {
-        // Throttling: chỉ gửi sau mỗi MOUSE_MOVE_DELAY ms
+
         long currentTime = System.currentTimeMillis();
         if (currentTime - lastMouseMoveTime < MOUSE_MOVE_DELAY) {
-            return; // Bỏ qua event này để tránh quá tải socket
+            return;
         }
         lastMouseMoveTime = currentTime;
 
@@ -147,8 +147,10 @@ public class ControlEvent implements MouseListener, MouseMotionListener, MouseWh
     public void keyPressed(KeyEvent e) {
         try {
             String control = Commands.PRESS_KEY.getAbbrev() + "," + e.getKeyCode();
-            dos.writeUTF(control);
-            dos.flush();
+            if (isValidKeyCode(e.getKeyCode())) {
+                dos.writeUTF(control);
+                dos.flush();
+            }
         } catch (Exception ex) {
             ex.printStackTrace();
         }
@@ -156,13 +158,26 @@ public class ControlEvent implements MouseListener, MouseMotionListener, MouseWh
 
     @Override
     public void keyReleased(KeyEvent e) {
+        String control = Commands.RELEASE_KEY.getAbbrev() + "," + e.getKeyCode();
         try {
-            String control = Commands.RELEASE_KEY.getAbbrev() + "," + e.getKeyCode();
-            dos.writeUTF(control);
-            dos.flush();
+            if (isValidKeyCode(e.getKeyCode())) {
+                dos.writeUTF(control);
+                dos.flush();
+            }
         } catch (Exception ex) {
             ex.printStackTrace();
         }
     }
 
+    private boolean isValidKeyCode(int keyCode) {
+
+        if (keyCode < 0 || keyCode > 65535) {
+            return false;
+        }
+        if (keyCode == 0) {
+            return false;
+        }
+
+        return true;
+    }
 }

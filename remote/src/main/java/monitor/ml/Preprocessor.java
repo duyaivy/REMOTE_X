@@ -135,8 +135,8 @@ public class Preprocessor {
     /**
      * Preprocess raw features thành feature vector cho model
      * 
-     * @param rawFeatures Map chứa raw features từ FeatureExtractor
-     * @return float[] vector với 69 features đã scaled
+     * @param rawFeatures
+     * @return float[] vector
      */
     public float[] preprocess(Map<String, Object> rawFeatures) {
         float[] features = new float[totalFeatures];
