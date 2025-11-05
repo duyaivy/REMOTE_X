@@ -41,15 +41,10 @@ public class AnomalyDetector {
 
         // Create ONNX environment
         env = OrtEnvironment.getEnvironment();
-
-        // Load model từ resources
-        System.out.print("  • Loading ONNX model... ");
-
-        // Copy model từ resources ra temp file (ONNX runtime cần file path)
         Path tempModel = Files.createTempFile("isolation_forest_model", ".onnx");
         try (InputStream is = getClass().getResourceAsStream("/isolation_forest_model.onnx")) {
             if (is == null) {
-                throw new IllegalArgumentException("Model not found: /isolation_forest_model.onnx");
+                throw new IllegalArgumentException("not found: /isolation_forest_model.onnx");
             }
             Files.copy(is, tempModel, StandardCopyOption.REPLACE_EXISTING);
         }
@@ -78,17 +73,12 @@ public class AnomalyDetector {
             throw new IllegalStateException("Model chưa được load! Gọi initialize() trước.");
         }
 
-        // Create input tensor: shape [1, 69]
         float[][] input2D = new float[][] { features };
         OnnxTensor inputTensor = OnnxTensor.createTensor(env, input2D);
 
-        // Run inference - sử dụng input name từ metadata: "float_input"
         Map<String, OnnxTensor> inputs = Collections.singletonMap("float_input", inputTensor);
         OrtSession.Result result = session.run(inputs);
 
-        // Get outputs
-        // Output 0: labels (long[][]) - 1 = normal, -1 = anomaly
-        // Output 1: scores (float[][]) - negative score = more anomalous
         long[][] labels = (long[][]) result.get(0).getValue();
         float[][] scores = (float[][]) result.get(1).getValue();
 
@@ -103,9 +93,6 @@ public class AnomalyDetector {
         return new AnomalyResult(isAnomaly, score);
     }
 
-    /**
-     * Đóng session và cleanup
-     */
     public void close() {
         try {
             if (session != null) {
@@ -120,9 +107,6 @@ public class AnomalyDetector {
         }
     }
 
-    /**
-     * Kết quả dự đoán anomaly
-     */
     public static class AnomalyResult {
         private final boolean isAnomaly;
         private final float score;
@@ -156,8 +140,10 @@ public class AnomalyDetector {
             }
 
             if (score < ANOMALY_THRESHOLD_CRITICAL) {
+
                 return "CRITICAL";
-            } else if (score < -0.3) {
+
+            } else if (score < -0.2) {
                 return "HIGH";
             } else if (score < -0.1) {
                 return "MEDIUM";

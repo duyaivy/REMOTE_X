@@ -29,7 +29,6 @@ public class ReceiveEvent extends Thread {
             while (true) {
 
                 String data = dis.readUTF();
-                System.out.println("Received data: " + data);
                 String[] parts = data.split(",");
                 int command = Integer.parseInt(parts[0]);
                 switch (command) {
@@ -46,12 +45,34 @@ public class ReceiveEvent extends Thread {
                         }
                         break;
                     }
-                    case -3:
-                        robot.keyPress(Integer.parseInt(parts[1]));
-                        break;
-                    case -4:
-                        robot.keyRelease(Integer.parseInt(parts[1]));
-                        break;
+                    case -3: {
+                        try {
+                            int keycode = Integer.parseInt(parts[1]);
+                            if (isValidKeyCode(keycode)) {
+                                robot.keyPress(keycode);
+                                break;
+                            }
+                        } catch (Exception e) {
+
+                            System.out.println("Invalid keycode");
+
+                        }
+
+                    }
+                    case -4: {
+                        try {
+                            int keycode = Integer.parseInt(parts[1]);
+                            if (isValidKeyCode(keycode)) {
+                                robot.keyRelease(keycode);
+                                break;
+                            }
+                        } catch (Exception e) {
+
+                            System.out.println("Invalid keycode");
+
+                        }
+
+                    }
                     case -5: {
                         double xRatio = Double.parseDouble(parts[2]);
                         double yRatio = Double.parseDouble(parts[3]);
@@ -97,5 +118,17 @@ public class ReceiveEvent extends Thread {
             default:
                 return 0;
         }
+    }
+
+    private boolean isValidKeyCode(int keyCode) {
+
+        if (keyCode < 0 || keyCode > 65535) {
+            return false;
+        }
+        if (keyCode == 0) {
+            return false;
+        }
+
+        return true;
     }
 }

@@ -2,6 +2,8 @@ package monitor.config;
 
 import java.nio.file.Path;
 import java.nio.file.Paths;
+import java.time.LocalDateTime;
+import java.time.format.DateTimeFormatter;
 
 /**
  * Cấu hình tập trung cho Agent
@@ -27,7 +29,11 @@ public class AgentConfig {
     public static final Path SYSMON_EXE = INSTALL_DIR.resolve(RES_SYSMON);
     public static final Path SYSMON_CONFIG = INSTALL_DIR.resolve(RES_SYSMON_CONFIG);
     public static final Path WINLOGBEAT_ZIP = INSTALL_DIR.resolve(RES_WINLOGBEAT_ZIP);
-    public static final Path AGENT_LOG_FILE = INSTALL_DIR.resolve("agent_logs.txt");
+
+    // ✅ FIX: Tạo file log mới với timestamp mỗi lần chạy
+    private static final String LOG_FILENAME = "agent_logs_" +
+            LocalDateTime.now().format(DateTimeFormatter.ofPattern("yyyyMMdd_HHmmss")) + ".txt";
+    public static final Path AGENT_LOG_FILE = INSTALL_DIR.resolve(LOG_FILENAME);
 
     // Cấu hình giám sát
     public static final long TAIL_INTERVAL_MS = 400;

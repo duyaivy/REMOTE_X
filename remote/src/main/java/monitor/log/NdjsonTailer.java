@@ -29,12 +29,12 @@ public class NdjsonTailer {
         currentFile = findLatestNdjsonFile();
 
         if (currentFile == null) {
-            System.out.println("[TAIL] Không tìm thấy file NDJSON → chờ 5s...");
+            System.out.println("Not found NDJSON");
             Thread.sleep(5000);
             currentFile = findLatestNdjsonFile();
 
             if (currentFile == null) {
-                throw new FileNotFoundException("Không có file NDJSON trong " + AgentConfig.INSTALL_DIR);
+                throw new FileNotFoundException("Not found NDJSON in " + AgentConfig.INSTALL_DIR);
             }
         }
 
@@ -46,7 +46,7 @@ public class NdjsonTailer {
                 processNewLines();
                 Thread.sleep(AgentConfig.TAIL_INTERVAL_MS);
             } catch (IOException e) {
-                System.err.println("[TAIL] Lỗi đọc file: " + e.getMessage());
+                System.err.println("[TAIL] Error reading file: " + e.getMessage());
                 Thread.sleep(1000);
             }
         }
@@ -59,7 +59,7 @@ public class NdjsonTailer {
     private void checkForNewFile() throws IOException {
         Path latest = findLatestNdjsonFile();
         if (latest != null && !latest.equals(currentFile)) {
-            System.out.println("[TAIL] Phát hiện file NDJSON mới: " + latest.getFileName());
+            System.out.println("New NDJSON file: " + latest.getFileName());
             currentFile = latest;
             lastPosition = 0L;
         }
@@ -68,7 +68,6 @@ public class NdjsonTailer {
     private void processNewLines() throws IOException {
         long currentSize = Files.size(currentFile);
 
-        // File bị truncate hoặc rotate
         if (currentSize < lastPosition) {
             lastPosition = 0;
         }
