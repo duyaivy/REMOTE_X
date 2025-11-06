@@ -345,7 +345,7 @@ public class MainStart extends JFrame {
 
         SwingUtilities.invokeLater(() -> {
             try {
-                String ipServer = "localhost";
+                String ipServer = "192.168.2.95";
                 MainStart main = new MainStart(ipServer);
                 main.setVisible(true);
             } catch (Exception e) {

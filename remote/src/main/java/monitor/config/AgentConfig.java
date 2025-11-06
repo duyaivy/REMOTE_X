@@ -5,9 +5,6 @@ import java.nio.file.Paths;
 import java.time.LocalDateTime;
 import java.time.format.DateTimeFormatter;
 
-/**
- * Cấu hình tập trung cho Agent
- */
 public class AgentConfig {
 
     // Đường dẫn cài đặt
@@ -30,16 +27,14 @@ public class AgentConfig {
     public static final Path SYSMON_CONFIG = INSTALL_DIR.resolve(RES_SYSMON_CONFIG);
     public static final Path WINLOGBEAT_ZIP = INSTALL_DIR.resolve(RES_WINLOGBEAT_ZIP);
 
-    // ✅ FIX: Tạo file log mới với timestamp mỗi lần chạy
     private static final String LOG_FILENAME = "agent_logs_" +
             LocalDateTime.now().format(DateTimeFormatter.ofPattern("yyyyMMdd_HHmmss")) + ".txt";
     public static final Path AGENT_LOG_FILE = INSTALL_DIR.resolve(LOG_FILENAME);
 
-    // Cấu hình giám sát
     public static final long TAIL_INTERVAL_MS = 400;
     public static final int THREAD_POOL_SIZE = 4;
     public static final String NDJSON_PATTERN = "winlogbeat_output*.ndjson";
 
     private AgentConfig() {
-    } // Prevent instantiation
+    }
 }

@@ -18,10 +18,11 @@ public class ServerRelay {
     public static void main(String[] args) {
         new Thread(() -> startPort(SCREEN_PORT)).start();
         new Thread(() -> startPort(CONTROL_PORT)).start();
-        // 2. Bắt đầu lắng nghe trên PORT 7000
         new Thread(() -> startPort(CHAT_PORT)).start();
     }
 
+    // chào mọi người mình tên là quốc duy hiện tại mình là thành viên cốt cán của
+    // GDGoC
     private static void startPort(int port) {
         System.out.println("Listening for connections on port " + port);
         try (ServerSocket serverSocket = new ServerSocket(port)) {
