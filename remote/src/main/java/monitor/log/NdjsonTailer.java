@@ -11,9 +11,6 @@ import java.nio.file.Files;
 import java.nio.file.Path;
 import java.nio.file.attribute.FileTime;
 
-/**
- * Theo dõi file NDJSON được tạo bởi Winlogbeat
- */
 public class NdjsonTailer {
 
     private final LogHandler logHandler;
@@ -29,16 +26,16 @@ public class NdjsonTailer {
         currentFile = findLatestNdjsonFile();
 
         if (currentFile == null) {
-            System.out.println("Not found NDJSON");
+            System.out.println("Không tìm thấy NDJSON");
             Thread.sleep(5000);
             currentFile = findLatestNdjsonFile();
 
             if (currentFile == null) {
-                throw new FileNotFoundException("Not found NDJSON in " + AgentConfig.INSTALL_DIR);
+                throw new FileNotFoundException("Không tìm thấy NDJSON " + AgentConfig.INSTALL_DIR);
             }
         }
 
-        System.out.println("[TAIL] Đang theo dõi file: " + currentFile);
+        System.out.println("Đang theo dõi file: " + currentFile);
 
         while (running) {
             try {
@@ -46,7 +43,7 @@ public class NdjsonTailer {
                 processNewLines();
                 Thread.sleep(AgentConfig.TAIL_INTERVAL_MS);
             } catch (IOException e) {
-                System.err.println("[TAIL] Error reading file: " + e.getMessage());
+                System.err.println("Lỗi đọc file: " + e.getMessage());
                 Thread.sleep(1000);
             }
         }

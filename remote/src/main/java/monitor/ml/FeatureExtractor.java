@@ -12,15 +12,6 @@ import java.util.Map;
 
 /**
  * Trích xuất raw features từ Sysmon JSON events
- * 
- * Features extracted theo model đã train:
- * - event_code: Sysmon Event ID
- * - timestamp: ISO timestamp
- * - user: User name
- * - process_name: Process name (Image)
- * - parent_name: Parent process name (ParentImage)
- * - command_line: Command line
- * - dest_port: Destination port (Event ID 3)
  */
 public class FeatureExtractor {
 
@@ -53,24 +44,30 @@ public class FeatureExtractor {
         String user = eventData.path("User").asText("Unknown");
         features.put("user", user);
 
-        // 4. Process Name (Image)
+        // 4. Image Path (FULL PATH for TF-IDF)
         String imagePath = eventData.path("Image").asText("");
+        features.put("image_path", imagePath);
+
+        // 5. Process Name (filename only for rules)
         String processName = extractProcessName(imagePath);
         features.put("process_name", processName);
 
-        // 5. Parent Process Name (ParentImage)
+        // 6. Parent Image Path (FULL PATH for TF-IDF)
         String parentPath = eventData.path("ParentImage").asText("");
+        features.put("parent_image", parentPath);
+
+        // 7. Parent Process Name (filename only for rules)
         String parentName = extractProcessName(parentPath);
         if (parentName.isEmpty()) {
             parentName = "-";
         }
         features.put("parent_name", parentName);
 
-        // 6. Command Line
+        // 8. Command Line
         String commandLine = eventData.path("CommandLine").asText("");
         features.put("command_line", commandLine);
 
-        // 7. Destination Port (chỉ có trong Event ID 3 - Network Connection)
+        // 9. Destination Port (chỉ có trong Event ID 3 - Network Connection)
         int destPort = eventData.path("DestinationPort").asInt(0);
         features.put("dest_port", destPort);
 

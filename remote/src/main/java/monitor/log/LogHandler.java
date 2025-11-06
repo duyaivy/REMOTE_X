@@ -14,8 +14,9 @@ public class LogHandler {
     private AlertService alertService;
     private boolean mlEnabled = false;
 
-    public LogHandler(AlertService alertService) {
+    public LogHandler(AlertService alertService, Preprocessor preprocessor) {
         this.alertService = alertService;
+        this.preprocessor = preprocessor;
         initializeML();
     }
 
@@ -26,7 +27,6 @@ public class LogHandler {
         try {
             System.out.println("Load ML");
 
-            preprocessor = new Preprocessor();
             preprocessor.loadArtifacts();
 
             // Initialize anomaly detector
@@ -72,6 +72,7 @@ public class LogHandler {
             if (result.isAnomaly()) {
                 System.out.println("[ML] ⚠️  ANOMALY detected - Score: " +
                         String.format("%.4f", result.getScore()));
+
                 alertService.showAlert(rawFeatures, result);
             }
 

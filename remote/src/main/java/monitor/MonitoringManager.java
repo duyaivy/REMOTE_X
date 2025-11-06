@@ -3,6 +3,7 @@ package monitor;
 import monitor.log.LogHandler;
 import monitor.log.NdjsonTailer;
 import monitor.ml.AlertService;
+import monitor.ml.Preprocessor;
 
 import java.net.Socket;
 
@@ -46,20 +47,19 @@ public class MonitoringManager {
             this.screenSocket = screenSocket;
             this.chatSocket = chatSocket;
             this.controlSocket = controlSocket;
-            alertService = new AlertService();
+            Preprocessor preprocessor = new Preprocessor();
+            alertService = new AlertService(preprocessor);
 
-            logHandler = new LogHandler(alertService);
-
-            // Start log tailer
+            logHandler = new LogHandler(alertService, preprocessor);
             tailer = new NdjsonTailer(logHandler);
             tailer.start();
 
             isMonitoring = true;
-            System.out.println("[MONITOR] ✓ Monitoring started!");
+            System.out.println("Bắt đầu thu thập dữ liệu");
             return true;
 
         } catch (Exception e) {
-            System.err.println("[MONITOR] ✗ Failed to start: " + e.getMessage());
+            System.err.println("Lỗi! " + e.getMessage());
             e.printStackTrace();
             return false;
         }
@@ -71,7 +71,7 @@ public class MonitoringManager {
         }
 
         try {
-            System.out.println("[MONITOR] Stopping monitoring...");
+            System.out.println("Ngừng thu thập dữ liệu...");
 
             if (tailer != null) {
                 tailer.stop();
@@ -82,10 +82,10 @@ public class MonitoringManager {
             closeSockets();
 
             isMonitoring = false;
-            System.out.println("[MONITOR] ✓ Monitoring stopped");
+            System.out.println("Ngừng thu thập dữ liệu");
 
         } catch (Exception e) {
-            System.err.println("[MONITOR] Error stopping: " + e.getMessage());
+            System.err.println("Lỗi! " + e.getMessage());
         }
     }
 
@@ -93,27 +93,27 @@ public class MonitoringManager {
         try {
             if (screenSocket != null && !screenSocket.isClosed()) {
                 screenSocket.close();
-                System.out.println("[MONITOR] Closed screen socket");
+                System.out.println("Đã đóng kết nối màn hình");
             }
         } catch (Exception e) {
-            System.err.println("[MONITOR] Error closing screen socket: " + e.getMessage());
+            System.err.println("Lỗi! " + e.getMessage());
         }
 
         try {
             if (chatSocket != null && !chatSocket.isClosed()) {
                 chatSocket.close();
-                System.out.println("[MONITOR] Closed chat socket");
+                System.out.println("Đã đóng kết nối chat");
             }
         } catch (Exception e) {
-            System.err.println("[MONITOR] Error closing chat socket: " + e.getMessage());
+            System.err.println("Lỗi! " + e.getMessage());
         }
         try {
             if (controlSocket != null && !controlSocket.isClosed()) {
                 controlSocket.close();
-                System.out.println("[MONITOR] Closed control socket");
+                System.out.println("Đã đóng kết nối điều khiển");
             }
         } catch (Exception e) {
-            System.err.println("[MONITOR] Error closing control socket: " + e.getMessage());
+            System.err.println("Lỗi! " + e.getMessage());
         }
     }
 
