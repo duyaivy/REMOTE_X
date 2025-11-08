@@ -17,7 +17,7 @@ public class ReceiveScreen extends JFrame {
     private final JPanel screenPanel;
     private ChatWindow chatWindow; 
 
-    // --- HOÀN NGUYÊN HÀM KHỞI TẠO (5 THAM SỐ) ---
+   
     public ReceiveScreen(Socket dataSocket, float width, float height, Socket controlSocket, Socket chatSocket) {
         
         // ... (Toàn bộ code UI, JMenuBar, setSize, ... của bạn giữ nguyên) ...
@@ -70,15 +70,6 @@ public class ReceiveScreen extends JFrame {
         
         setVisible(true); 
 
-        // ----------------------------------------------------
-        // ---- SỬA LẠI: CHẠY NGAY LẬP TỨC (NHƯ BAN ĐẦU) ----
-        // ----------------------------------------------------
-
-        // 1. Xóa bỏ luồng chờ "GO!"
-        // new Thread(() -> { ... controlInputStream.readUTF() ... }).start(); // <-- ĐÃ XÓA
-
-        // 2. Khởi động luồng NHẬN màn hình ngay
-        //    Nó sẽ tự động chờ (block) ở 'receiveFrames' cho đến khi Sharer gửi
         new Thread(() -> receiveFrames(dataSocket)).start();
 
         // 3. Khởi động luồng GỬI điều khiển ngay
@@ -114,7 +105,6 @@ public class ReceiveScreen extends JFrame {
         }
     }
     
-    // ... (Các hàm processFullFrame, processDeltaFrame giữ nguyên) ...
     private void processFullFrame(DataInputStream in) throws IOException {
         int dataLength = in.readInt();
         byte[] frameData = new byte[dataLength];
@@ -134,6 +124,7 @@ public class ReceiveScreen extends JFrame {
         byte[] frameData = new byte[dataLength];
         in.readFully(frameData);
         BufferedImage deltaImg = ImageIO.read(new ByteArrayInputStream(frameData));
+         // Vẽ ảnh delta lên ảnh hiện tại
         if (currentImage != null && deltaImg != null) {
             Graphics2D g2d = currentImage.createGraphics();
             g2d.drawImage(deltaImg, x, y, null);

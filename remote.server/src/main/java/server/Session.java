@@ -11,6 +11,7 @@ public class Session {
     private final String width;
     private final String height;
     private final Map<String, Session> sessionMap;
+    
     private Socket sharerControlSocket;
     private Socket sharerScreenSocket;
     private Socket viewerControlSocket;
@@ -35,8 +36,10 @@ public class Session {
         return sharerControlSocket != null && sharerScreenSocket != null && sharerChatSocket != null;
     }
 
-    public String getWidth() { return width; }
-    public String getHeight() { return height; }
+    public String getWidth() {
+         return width; }
+    public String getHeight() {
+         return height; }
 
     public synchronized void setSharerSocket(Socket socket, String connectType) throws IOException {
 
@@ -53,7 +56,12 @@ public class Session {
     public synchronized void setViewerSocketAndAttemptRelay(Socket viewerSocket, String connectType) {
         
         if (relayStarted) {
-            try { viewerSocket.close(); } catch (IOException e) {}
+            try {
+                 viewerSocket.close();
+                } catch (IOException e) {
+
+                }
+
             return;
         }
 
@@ -84,8 +92,10 @@ public class Session {
               
                 new RelayThread(sharerScreenSocket, viewerScreenSocket).start();
                 new RelayThread(viewerScreenSocket, sharerScreenSocket).start();
+
                 new RelayThread(sharerControlSocket, viewerControlSocket).start();
                 new RelayThread(viewerControlSocket, sharerControlSocket).start();
+
                 new RelayThread(sharerChatSocket, viewerChatSocket).start();
                 new RelayThread(viewerChatSocket, sharerChatSocket).start();
 
@@ -100,12 +110,24 @@ public class Session {
     
     private void cleanup() {
 
-        try { if (sharerScreenSocket != null) sharerScreenSocket.close(); } catch (IOException e) {}
-        try { if (sharerControlSocket != null) sharerControlSocket.close(); } catch (IOException e) {}
-        try { if (viewerScreenSocket != null) viewerScreenSocket.close(); } catch (IOException e) {}
-        try { if (viewerControlSocket != null) viewerControlSocket.close(); } catch (IOException e) {}
-        try { if (sharerChatSocket != null) sharerChatSocket.close(); } catch (IOException e) {}
-        try { if (viewerChatSocket != null) viewerChatSocket.close(); } catch (IOException e) {}
+        try { 
+            if (sharerScreenSocket != null) 
+            sharerScreenSocket.close(); } catch (IOException e) {}
+        try { 
+            if (sharerControlSocket != null) 
+            sharerControlSocket.close(); } catch (IOException e) {}
+        try { 
+            if (viewerScreenSocket != null) viewerScreenSocket.close(); } 
+            catch (IOException e) {}
+        try { 
+            if (viewerControlSocket != null) viewerControlSocket.close(); } 
+            catch (IOException e) {}
+        try { 
+            if (sharerChatSocket != null) sharerChatSocket.close(); } 
+            catch (IOException e) {}
+        try { 
+            if (viewerChatSocket != null) viewerChatSocket.close(); } 
+            catch (IOException e) {}
         sessionMap.remove(this.username);
     }
 }

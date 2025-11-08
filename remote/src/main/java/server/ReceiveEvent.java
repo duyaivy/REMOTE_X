@@ -6,8 +6,8 @@ import java.io.IOException;
 import java.net.Socket;
 import java.awt.event.InputEvent;
 import server.ShareScreen; 
-import javax.swing.JButton; // <-- THÊM IMPORT NÀY
-import javax.swing.SwingUtilities; // <-- THÊM IMPORT NÀY
+import javax.swing.JButton; 
+import javax.swing.SwingUtilities; 
 
 public class ReceiveEvent extends Thread {
     private DataInputStream dis;
@@ -65,11 +65,13 @@ public class ReceiveEvent extends Thread {
                     switch (command) {
                         case -1:
                             int buttonMask = getButtonMask(Integer.parseInt(parts[1]));
-                            if (buttonMask != 0) robot.mousePress(buttonMask);
+                            if (buttonMask != 0) 
+                            robot.mousePress(buttonMask);
                             break;
                         case -2: 
                             int releaseMask = getButtonMask(Integer.parseInt(parts[1]));
-                            if (releaseMask != 0) robot.mouseRelease(releaseMask);
+                            if (releaseMask != 0)
+                             robot.mouseRelease(releaseMask);
                             break;
                         case -3:
                             robot.keyPress(Integer.parseInt(parts[1]));
@@ -125,9 +127,12 @@ public class ReceiveEvent extends Thread {
 
     public int getButtonMask(int button) {
         switch (button) {
-            case 1: return InputEvent.BUTTON1_DOWN_MASK;
-            case 2: return InputEvent.BUTTON2_DOWN_MASK;
-            case 3: return InputEvent.BUTTON3_DOWN_MASK;
+            case 1:
+             return InputEvent.BUTTON1_DOWN_MASK;
+            case 2:
+             return InputEvent.BUTTON2_DOWN_MASK;
+            case 3:
+             return InputEvent.BUTTON3_DOWN_MASK;
             default: return 0;
         }
     }
