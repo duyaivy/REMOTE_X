@@ -18,13 +18,13 @@ public class ClientHandler extends Thread {
 
     @Override
     public void run() {
-        // (Hàm run() không thay đổi)
+        
         try {
             DataInputStream dis = new DataInputStream(clientSocket.getInputStream());
             DataOutputStream dos = new DataOutputStream(clientSocket.getOutputStream());
 
             String[] data = dis.readUTF().split(",");
-            if (data.length < 6) { // Cần 6 phần tử: user, pass, type, connectType, width, height
+            if (data.length < 6) { 
                 System.err.println("Invalid message format received from " + clientSocket.getRemoteSocketAddress());
                 dos.writeUTF("false,Invalid message format");
                 clientSocket.close(); 
@@ -65,7 +65,7 @@ public class ClientHandler extends Thread {
     private void handleSharer(String username, String password, String connectType, String w, String h,
             DataOutputStream dos)
             throws IOException {
-        // (Hàm handleSharer() không thay đổi)
+
         // Nó gửi "true,..." cho cả 3 kết nối, điều này là OK
         // vì MainStart (Sharer) đọc cả 3.
         synchronized (activeSessions) {
@@ -90,10 +90,6 @@ public class ClientHandler extends Thread {
             }
         }
     }
-
-    // ----------------------------------------------------
-    // ---- SỬA LỖI NẰM TRONG HÀM NÀY ----
-    // ----------------------------------------------------
     private void handleViewer(String username, String password, String connectType, String width, String height,
             DataOutputStream dos)
             throws IOException {
@@ -101,8 +97,6 @@ public class ClientHandler extends Thread {
         synchronized (activeSessions) {
             session = activeSessions.get(username);
         }
-
-        // (Các kiểm tra an ninh giữ nguyên)
         if (session == null) {
             dos.writeUTF("false,Session not found");
             clientSocket.close();
@@ -120,31 +114,26 @@ public class ClientHandler extends Thread {
         }
 
         // Giao socket cho session VÀ để Session tự gửi tín hiệu "START_SESSION"
-        // (Đây là logic chính xác từ trước)
+
         session.setViewerSocketAndAttemptRelay(clientSocket, connectType);
-        
-        // ----------------------------------------------------
-        // ---- SỬA LỖI GỬI NHẦM DỮ LIỆU ----
-        // ----------------------------------------------------
-        // Chúng ta phải gửi đúng thông tin phản hồi cho đúng kênh (port)
         
         switch (connectType) {
             case "screen":
-                // Chỉ gửi width/height cho kênh "screen" (port 5000)
+             
                 dos.writeUTF("true," + session.getWidth() + "," + session.getHeight());
                 break;
             case "control":
-                // Gửi "OK" cho kênh "control" (port 6000)
+                
                 dos.writeUTF("true,control_ok");
                 break;
             case "chat":
-                // Gửi "OK" cho kênh "chat" (port 7000)
+               
                 dos.writeUTF("true,chat_ok");
                 break;
             default:
                 dos.writeUTF("false,Unknown connectType");
                 break;
         }
-        // Dòng dos.writeUTF(...) cũ đã bị xóa và thay bằng switch-case này.
+    
     }
 }

@@ -28,7 +28,7 @@ public class RelayThread extends Thread {
                 outputStream.flush();
             }
         } catch (Exception e) {
-            // Thường là do một trong hai socket đã đóng
+            
             System.out.println("Relay thread terminated: " + e.getMessage());
         } finally {
             try {

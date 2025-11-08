@@ -1,26 +1,25 @@
 package client;
 
-// --- CÁC IMPORT THÊM VÀO ---
-import common.ChatWindow; // <-- Đảm bảo import đúng package
+import common.ChatWindow;
 import javax.swing.*;
 import java.awt.*;
-//... (các import khác của bạn) ...
 import javax.imageio.ImageIO;
 import java.awt.image.BufferedImage;
 import java.io.ByteArrayInputStream;
-import java.io.DataInputStream; // <-- THÊM IMPORT NÀY
+import java.io.DataInputStream; 
 import java.io.IOException;
 import java.net.Socket;
 
 public class ReceiveScreen extends JFrame {
 
-    // (Các biến cũ của bạn giữ nguyên)
     private volatile BufferedImage currentImage = null;
     private volatile String statusMessage = "Đang kết nối tới server...";
     private final JPanel screenPanel;
     private ChatWindow chatWindow; 
 
+    // --- HOÀN NGUYÊN HÀM KHỞI TẠO (5 THAM SỐ) ---
     public ReceiveScreen(Socket dataSocket, float width, float height, Socket controlSocket, Socket chatSocket) {
+        
         // ... (Toàn bộ code UI, JMenuBar, setSize, ... của bạn giữ nguyên) ...
         setTitle("RemoteX Screen Viewer");
         Dimension screenSize = Toolkit.getDefaultToolkit().getScreenSize();
@@ -33,10 +32,9 @@ public class ReceiveScreen extends JFrame {
             width = (int) (remoteWidth * scaleFactor);
             height = (int) (remoteHeight * scaleFactor);
         }
-        setSize((int) width, (int) height);
+        setSize((int) (int) width, (int) height);
         setLocationRelativeTo(null);
         setDefaultCloseOperation(JFrame.DISPOSE_ON_CLOSE);
-
         screenPanel = new JPanel() {
             @Override
             protected void paintComponent(Graphics g) {
@@ -73,52 +71,28 @@ public class ReceiveScreen extends JFrame {
         setVisible(true); 
 
         // ----------------------------------------------------
-        // ---- SỬA LẠI LOGIC CHỜ TÍN HIỆU "GO!" ----
+        // ---- SỬA LẠI: CHẠY NGAY LẬP TỨC (NHƯ BAN ĐẦU) ----
         // ----------------------------------------------------
 
-        // 1. XÓA DÒNG GỌI `new ControlEvent(...)` CŨ Ở ĐÂY
-        // new ControlEvent(controlSocket, screenPanel); // <-- LỖI LÀ Ở ĐÂY
+        // 1. Xóa bỏ luồng chờ "GO!"
+        // new Thread(() -> { ... controlInputStream.readUTF() ... }).start(); // <-- ĐÃ XÓA
 
-        // 2. Tạo luồng chờ tín hiệu "GO!"
-        new Thread(() -> {
-            try {
-                // Dùng controlSocket (InputStream) để chờ tín hiệu
-                DataInputStream disControl = new DataInputStream(controlSocket.getInputStream());
-                
-                System.out.println("ReceiveScreen (Viewer): Đang chờ tín hiệu START_SESSION...");
-                String signal = disControl.readUTF(); 
-                
-                if (signal.equals("START_SESSION")) {
-                    System.out.println("ReceiveScreen (Viewer): Đã nhận tín hiệu GO!");
-                    
-                    // PHA 1: KHỞI ĐỘNG LUỒNG NHẬN MÀN HÌNH
-                    new Thread(() -> receiveFrames(dataSocket)).start();
-                    
-                    // PHA 2: KHỞI ĐỘNG LUỒNG GỬI ĐIỀU KHIỂN
-                    // (Chỉ chạy sau khi đã nhận được tín hiệu "GO")
-                    new ControlEvent(controlSocket, screenPanel);
-                    
-                } else {
-                     System.err.println("ReceiveScreen (Viewer): Nhận được tín hiệu lạ: " + signal);
-                }
-            } catch (IOException e) {
-                System.err.println("ReceiveScreen (Viewer): Mất kết nối khi chờ tín hiệu GO: " + e.getMessage());
-                statusMessage = "Mất kết nối tới server: " + e.getMessage();
-                currentImage = null;
-                screenPanel.repaint();
-            }
-        }).start();
+        // 2. Khởi động luồng NHẬN màn hình ngay
+        //    Nó sẽ tự động chờ (block) ở 'receiveFrames' cho đến khi Sharer gửi
+        new Thread(() -> receiveFrames(dataSocket)).start();
 
-        // 3. XÓA dòng chạy `receiveFrames` cũ
-        // new Thread(() -> receiveFrames(dataSocket)).start(); // <-- ĐÃ XÓA
+        // 3. Khởi động luồng GỬI điều khiển ngay
+        new ControlEvent(controlSocket, screenPanel);
     }
-    
-    // ... (Các hàm receiveFrames, processFullFrame, processDeltaFrame giữ nguyên) ...
     
     private void receiveFrames(Socket socket) {
         try (DataInputStream in = new DataInputStream(socket.getInputStream())) {
-            int screenWidth = in.readInt();
+            
+            // Dòng này sẽ "treo" lại, chờ ShareScreen (Sharer) gửi int đầu tiên
+            // (khi Sharer nhận được tín hiệu "GO!")
+            int screenWidth = in.readInt(); 
             int screenHeight = in.readInt();
+
             currentImage = new BufferedImage(screenWidth, screenHeight, BufferedImage.TYPE_INT_RGB);
             statusMessage = null; // Xóa chữ "Đang kết nối..."
 
@@ -140,6 +114,7 @@ public class ReceiveScreen extends JFrame {
         }
     }
     
+    // ... (Các hàm processFullFrame, processDeltaFrame giữ nguyên) ...
     private void processFullFrame(DataInputStream in) throws IOException {
         int dataLength = in.readInt();
         byte[] frameData = new byte[dataLength];

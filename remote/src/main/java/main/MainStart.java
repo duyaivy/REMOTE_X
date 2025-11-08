@@ -1,23 +1,18 @@
-
-
 package main;
 
 import javax.swing.*;
 import javax.swing.border.*;
 import client.ReceiveScreen;
-
-// <-- THÊM IMPORT NÀY
 import java.awt.*;
 import java.io.DataInputStream;
 import java.io.DataOutputStream;
 import java.net.Socket;
-
+import java.awt.Robot; 
 import server.ReceiveEvent;
 import server.ShareScreen;
 
 public class MainStart extends JFrame {
 
-    // Giả sử port chat của serverRelay là 7000
     private static final int CHAT_PORT = 7000;
 
     public MainStart(String ipServer) {
@@ -27,6 +22,8 @@ public class MainStart extends JFrame {
         setLocationRelativeTo(null);
         setLayout(new GridLayout(1, 2));
 
+        // --- BÊN TRÁI (CHO PHÉP ĐIỀU KHIỂN - SHARER) ---
+        // (Phần này đã đúng, không thay đổi)
         JPanel leftPanel = new JPanel(new GridBagLayout());
         leftPanel.setBorder(new TitledBorder(new EtchedBorder(), "Cho phép điều khiển"));
         GridBagConstraints gbc = new GridBagConstraints();
@@ -38,7 +35,6 @@ public class MainStart extends JFrame {
         JTextField txtIDBan = new JTextField("", 15);
         JLabel lblMatKhau = new JLabel("Mật khẩu");
         JTextField txtMatKhau = new JTextField("", 15);
-
         JButton btnStartShare = new JButton("Cho phép điều khiển");
         btnStartShare.addActionListener(e -> {
             String username = txtIDBan.getText().trim();
@@ -57,38 +53,28 @@ public class MainStart extends JFrame {
 
                     @Override
                     protected Void doInBackground() throws Exception {
+                        // ... (Code doInBackground của Sharer không đổi) ...
                         try {
                             socketScreen = new Socket(ipServer, 5000);
                             socketControl = new Socket(ipServer, 6000);
                             socketChat = new Socket(ipServer, CHAT_PORT); 
-
-                            String initMessage = username + "," + password + ",sharer," + screen.getWidth() + ","
-                                    + screen.getHeight();
-                            
+                            String initMessage = username + "," + password + ",sharer," + screen.getWidth() + "," + screen.getHeight();
                             DataOutputStream dosScreen = new DataOutputStream(socketScreen.getOutputStream());
                             DataOutputStream dosControl = new DataOutputStream(socketControl.getOutputStream());
                             DataOutputStream dosChat = new DataOutputStream(socketChat.getOutputStream()); 
-
                             dosScreen.writeUTF(initMessage + ",screen");
                             dosControl.writeUTF(initMessage + ",control");
                             dosChat.writeUTF(initMessage + ",chat"); 
-                            
-                            dosScreen.flush();
-                            dosControl.flush();
-                            dosChat.flush(); 
-
+                            dosScreen.flush(); dosControl.flush(); dosChat.flush(); 
                             DataInputStream disScreen = new DataInputStream(socketScreen.getInputStream());
                             DataInputStream disControl = new DataInputStream(socketControl.getInputStream());
                             DataInputStream disChat = new DataInputStream(socketChat.getInputStream()); 
-
                             String responseScreen = disScreen.readUTF();
                             String responseControl = disControl.readUTF();
                             String responseChat = disChat.readUTF(); 
-
                             if (responseScreen.startsWith("false") || responseControl.startsWith("false") || responseChat.startsWith("false")) {
                                 throw new Exception("Server response: " + responseScreen + " | " + responseControl + " | " + responseChat);
                             }
-
                         } catch (Exception e) {
                             try { if (socketScreen != null) socketScreen.close(); } catch (Exception ex) {}
                             try { if (socketControl != null) socketControl.close(); } catch (Exception ex) {}
@@ -97,68 +83,45 @@ public class MainStart extends JFrame {
                         }
                         return null;
                     }
-
-                    // ----------------------------------------------------
-                    // ---- SỬA LẠI HÀM DONE() CỦA SHARER ----
-                    // ----------------------------------------------------
+                    
                     @Override
                     protected void done() {
+                        // ... (Code done() của Sharer không đổi, vẫn gọi ReceiveEvent 7 tham số) ...
                         try {
-                            get(); // Kết nối 3 socket thành công
-                            
-                            // 1. Thông báo cho người dùng là đang chờ
+                            get(); 
                             JOptionPane.showMessageDialog(MainStart.this, "Kết nối thành công! Đang chờ đối tác...");
-                            btnStartShare.setText("Đang chờ..."); // Cập nhật text nút
-
-                            // 2. KHÔNG khởi động ShareScreen ở đây nữa
-                            // new Thread(() -> { ... }).start(); // <-- ĐÃ XÓA
-
-                            // 3. Khởi động ReceiveEvent và truyền TẤT CẢ 3 socket cho nó
-                            // ReceiveEvent (ở bước 4) sẽ lo việc chờ tín hiệu "GO"
+                            btnStartShare.setText("Đang chia sẻ..."); 
                             Robot rb = new Robot(gDev);
-                            
-                            // TRUYỀN CẢ 3 SOCKET VÀO ReceiveEvent
-                            new ReceiveEvent(socketControl, socketScreen, socketChat, rb, screen.height, screen.width);
-                            
+                            new ReceiveEvent(socketControl, socketScreen, socketChat, rb, screen.height, screen.width, btnStartShare);
                         } catch (Exception ex) {
                             ex.printStackTrace();
-                            JOptionPane.showMessageDialog(MainStart.this,
-                                    "Không thể kết nối đến server: " + ex.getMessage(), "Lỗi",
-                                    JOptionPane.ERROR_MESSAGE);
-
-                            // Đóng socket nếu chúng đã được mở (nếu get() bị lỗi)
+                            JOptionPane.showMessageDialog(MainStart.this, "Không thể kết nối đến server: " + ex.getMessage(), "Lỗi", JOptionPane.ERROR_MESSAGE);
                             try { if (socketScreen != null) socketScreen.close(); } catch (Exception e) {}
                             try { if (socketControl != null) socketControl.close(); } catch (Exception e) {}
                             try { if (socketChat != null) socketChat.close(); } catch (Exception e) {}
-
-                            // Bật lại nút nếu có lỗi
                             btnStartShare.setEnabled(true);
                             btnStartShare.setText("Cho phép điều khiển");
-                        }
-                        // Xóa khối 'finally' cũ để nút không tự động bật lại khi thành công
+                        } 
                     }
                 };
                 worker.execute();
             }
         });
-
-        // ... (code add component của leftPanel) ...
         gbc.gridx = 0; gbc.gridy = 0; leftPanel.add(lblIDBan, gbc);
         gbc.gridy = 1; leftPanel.add(txtIDBan, gbc);
         gbc.gridy = 2; leftPanel.add(lblMatKhau, gbc);
         gbc.gridy = 3; leftPanel.add(txtMatKhau, gbc);
         gbc.gridy = 4; leftPanel.add(btnStartShare, gbc);
 
-        // ----------------------------------------------------
-        // ---- KHÔNG SỬA GÌ Ở "ĐIỀU KHIỂN" (VIEWER) ----
-        // ----------------------------------------------------
+
+        // --- BÊN PHẢI (ĐIỀU KHIỂN - VIEWER) ---
+        // (Phần này sẽ được SỬA LẠI - HOÀN NGUYÊN)
         JPanel rightPanel = new JPanel(new GridBagLayout());
         rightPanel.setBorder(new TitledBorder(new EtchedBorder(), "Điều khiển máy tính khác"));
         GridBagConstraints gbc2 = new GridBagConstraints();
         gbc2.insets = new Insets(5, 5, 5, 5);
         gbc2.anchor = GridBagConstraints.WEST;
         gbc2.fill = GridBagConstraints.HORIZONTAL;
-
         JLabel lblIDDT = new JLabel("ID đối tác");
         JTextField txtIDDT = new JTextField(15);
         JLabel lblMKDT = new JLabel("Mật khẩu");
@@ -168,22 +131,23 @@ public class MainStart extends JFrame {
         btnStart.addActionListener(e -> {
             String partnerID = txtIDDT.getText().trim();
             String partnerPassword = txtMKDT.getText().trim();
-
             if (partnerID.isEmpty() || partnerPassword.isEmpty()) {
-                JOptionPane.showMessageDialog(this, "Vui lòng nhập ID và mật khẩu đối tác.", "Lỗi",
-                        JOptionPane.ERROR_MESSAGE);
+                JOptionPane.showMessageDialog(this, "Vui lòng nhập ID và mật khẩu đối tác.", "Lỗi", JOptionPane.ERROR_MESSAGE);
                 return;
             }
-
             btnStart.setEnabled(false);
             btnStart.setText("Đang kết nối...");
 
             SwingWorker<Void, Void> controlWorker = new SwingWorker<Void, Void>() {
                 private Socket socketScreen;
                 private Socket socketControl;
-                private Socket socketChat; 
+                private Socket socketChat;
+                // --- XÓA BIẾN disControl ---
+                // private DataInputStream disControl; // <-- XÓA DÒNG NÀY
                 private float remoteWidth;
                 private float remoteHeight;
+                private GraphicsEnvironment gEnv = GraphicsEnvironment.getLocalGraphicsEnvironment();
+                private GraphicsDevice gDev = gEnv.getDefaultScreenDevice();
 
                 @Override
                 protected Void doInBackground() throws Exception {
@@ -191,41 +155,34 @@ public class MainStart extends JFrame {
                         socketScreen = new Socket(ipServer, 5000);
                         socketControl = new Socket(ipServer, 6000);
                         socketChat = new Socket(ipServer, CHAT_PORT); 
-
-                        String initMessage = partnerID + "," + partnerPassword + ",viewer," + screen.getWidth() + ","
-                                + screen.getHeight();
-                        
+                        String initMessage = partnerID + "," + partnerPassword + ",viewer," + screen.getWidth() + "," + screen.getHeight();
                         DataOutputStream dosScreen = new DataOutputStream(socketScreen.getOutputStream());
                         DataOutputStream dosControl = new DataOutputStream(socketControl.getOutputStream());
                         DataOutputStream dosChat = new DataOutputStream(socketChat.getOutputStream()); 
-
                         dosScreen.writeUTF(initMessage + ",screen");
                         dosControl.writeUTF(initMessage + ",control");
                         dosChat.writeUTF(initMessage + ",chat"); 
+                        dosScreen.flush(); dosControl.flush(); dosChat.flush(); 
 
-                        dosScreen.flush();
-                        dosControl.flush();
-                        dosChat.flush(); 
-
+                        // --- HOÀN NGUYÊN (REVERT) LẠI ---
+                        // Đọc handshake bằng biến local, không lưu vào 'this.disControl'
                         DataInputStream disScreen = new DataInputStream(socketScreen.getInputStream());
-                        DataInputStream disControl = new DataInputStream(socketControl.getInputStream());
+                        DataInputStream disControl = new DataInputStream(socketControl.getInputStream()); 
                         DataInputStream disChat = new DataInputStream(socketChat.getInputStream()); 
-
                         String responseScreen = disScreen.readUTF();
-                        String responseControl = disControl.readUTF();
+                        String responseControl = disControl.readUTF(); 
                         String responseChat = disChat.readUTF(); 
+                        // --- HẾT HOÀN NGUYÊN ---
 
                         if (responseScreen.startsWith("false") || responseControl.startsWith("false") || responseChat.startsWith("false")) {
                             throw new Exception("Server response: " + responseScreen + " | " + responseControl + " | " + responseChat);
                         }
-                        
                         String[] res = responseScreen.split(",");
                         if (res.length < 3) {
                             throw new Exception("Lỗi dữ liệu trả về: " + responseScreen);
                         }
                         remoteWidth = Float.parseFloat(res[1]);
                         remoteHeight = Float.parseFloat(res[2]);
-
                     } catch (Exception ex) {
                         try { if (socketScreen != null) socketScreen.close(); } catch (Exception e) {}
                         try { if (socketControl != null) socketControl.close(); } catch (Exception e) {}
@@ -240,13 +197,14 @@ public class MainStart extends JFrame {
                     try {
                         get();
                         JOptionPane.showMessageDialog(MainStart.this, "Kết nối thành công! Bắt đầu điều khiển.");
-                        // Logic chờ "GO" của Viewer nằm BÊN TRONG ReceiveScreen
+                        
+                        // --- HOÀN NGUYÊN LỜI GỌI (5 THAM SỐ) ---
+                        // Xóa 'this.disControl' khỏi lời gọi
                         new ReceiveScreen(socketScreen, remoteWidth, remoteHeight, socketControl, socketChat);
+                        
                     } catch (Exception ex) {
                         ex.printStackTrace();
-                        JOptionPane.showMessageDialog(MainStart.this,
-                                "Không thể kết nối đến đối tác: " + ex.getMessage(), "Lỗi",
-                                JOptionPane.ERROR_MESSAGE);
+                        JOptionPane.showMessageDialog(MainStart.this, "Không thể kết nối đến đối tác: " + ex.getMessage(), "Lỗi", JOptionPane.ERROR_MESSAGE);
                     } finally {
                         btnStart.setEnabled(true);
                         btnStart.setText("Bắt đầu điều khiển");
@@ -256,38 +214,25 @@ public class MainStart extends JFrame {
             controlWorker.execute();
         });
 
-        // ... (code add component của rightPanel) ...
         gbc2.gridx = 0; gbc2.gridy = 0; rightPanel.add(lblIDDT, gbc2);
         gbc2.gridy = 1; rightPanel.add(txtIDDT, gbc2);
         gbc2.gridy = 2; rightPanel.add(lblMKDT, gbc2);
         gbc2.gridy = 3; rightPanel.add(txtMKDT, gbc2);
         gbc2.gridy = 4; rightPanel.add(btnStart, gbc2);
 
-
         add(leftPanel);
         add(rightPanel);
     }
 
     public static void main(String[] args) {
-
         SwingUtilities.invokeLater(() -> {
             try {
-                // Sửa IP ở đây khi test 2 máy
-
-                //-- LƯU Ý QUAN TRỌNG: Tôi đã sửa "" thành "localhost"
-                // Bạn phải đổi "localhost" thành IP của serverRelay khi chạy thật
-            	// nếu cùng mạng wf thì hắn cũng phải có dạng ip là 172.x.x.x chớ, cá ni làm sai r nè,.  vidu đây là máy chạy servẻ thì cái main start đặt localhost cũng được 
-                
-            	// qua máy bên kia nhập ip vô như cái bên dưới
-            	// qua máy bên kia nhập đúng ip vô chạy r test thử hì, có chi nt nghe
                 String ipServer = "localhost"; 
                 MainStart main = new MainStart(ipServer);
                 main.setVisible(true);
             } catch (Exception e) {
                 e.printStackTrace();
-                JOptionPane.showMessageDialog(null,
-                        "Không thể khởi tạo ứng dụng: " + e.getMessage(),
-                        "Lỗi khởi tạo", JOptionPane.ERROR_MESSAGE);
+                JOptionPane.showMessageDialog(null, "Không thể khởi tạo ứng dụng: " + e.getMessage(), "Lỗi khởi tạo", JOptionPane.ERROR_MESSAGE);
             }
         });
     }
