@@ -29,8 +29,6 @@
 
     <build>
         <plugins>
-
-            <!-- tạo fat-jar runnable -->
             <plugin>
                 <groupId>org.apache.maven.plugins</groupId>
                 <artifactId>maven-shade-plugin</artifactId>
