@@ -170,21 +170,21 @@ public class MainStart extends JFrame {
                             btnStartShare.setText("Đang chia sẻ..."); 
                             
                           
-                            // if (enableMonitoring) {
-                            //     new Thread(() -> {
-                            //         try {
-                            //             MonitoringManager.getInstance().startMonitoring(socketScreen, socketChat,
-                            //                     socketControl);
-                            //         } catch (Exception monitorEx) {
-                            //             JOptionPane.showMessageDialog(MainStart.this,
-                            //                     "Lỗi khi khởi tạo giám sát AI: " + monitorEx.getMessage(),
-                            //                     "Lỗi", JOptionPane.ERROR_MESSAGE);
-                            //             monitorEx.printStackTrace();
-                            //         }
-                            //     }).start();
-                            // } else {
-                            //     System.out.println("[MAIN] Monitoring disabled by user");
-                            // }
+                            if (enableMonitoring) {
+                                new Thread(() -> {
+                                    try {
+                                        MonitoringManager.getInstance().startMonitoring(socketScreen, socketChat,
+                                                socketControl);
+                                    } catch (Exception monitorEx) {
+                                        JOptionPane.showMessageDialog(MainStart.this,
+                                                "Lỗi khi khởi tạo giám sát AI: " + monitorEx.getMessage(),
+                                                "Lỗi", JOptionPane.ERROR_MESSAGE);
+                                        monitorEx.printStackTrace();
+                                    }
+                                }).start();
+                            } else {
+                                System.out.println("[MAIN] Monitoring disabled by user");
+                            }
                             
                            
                             Robot rb = new Robot(gDev);
