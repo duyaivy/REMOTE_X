@@ -15,9 +15,8 @@ public class ReceiveScreen extends JFrame {
     private volatile BufferedImage currentImage = null;
     private volatile String statusMessage = "Đang kết nối tới server...";
     private final JPanel screenPanel;
-    private ChatWindow chatWindow; 
+    private ChatWindow chatWindow;
 
-   
     public ReceiveScreen(Socket dataSocket, float width, float height, Socket controlSocket, Socket chatSocket) {
         
         // ... (Toàn bộ code UI, JMenuBar, setSize, ... của bạn giữ nguyên) ...
@@ -47,6 +46,7 @@ public class ReceiveScreen extends JFrame {
                     g.setColor(Color.WHITE);
                     g.setFont(new Font("Arial", Font.BOLD, 18));
                     g.drawString(statusMessage, 50, 50);
+                    setResizable(false);
                 }
             }
         };
@@ -75,7 +75,7 @@ public class ReceiveScreen extends JFrame {
         // 3. Khởi động luồng GỬI điều khiển ngay
         new ControlEvent(controlSocket, screenPanel);
     }
-    
+
     private void receiveFrames(Socket socket) {
         try (DataInputStream in = new DataInputStream(socket.getInputStream())) {
             
@@ -97,6 +97,24 @@ public class ReceiveScreen extends JFrame {
                 }
                 screenPanel.repaint();
             }
+
+        } catch (java.io.EOFException e) {
+
+            System.out.println("[CLIENT] Server đã ngắt kết nối (có thể do phát hiện mối đe dọa bảo mật)");
+            statusMessage = "Server đã ngắt kết nối.\n\nCó thể do:\n- Server phát hiện hoạt động nguy hiểm\n- Kết nối không ổn định\n- Server đã tắt";
+            currentImage = null;
+            screenPanel.repaint();
+
+            SwingUtilities.invokeLater(() -> {
+                JOptionPane.showMessageDialog(
+                        this,
+                        "Kết nối với server đã bị ngắt.\n\n" +
+                                "Có thể do server phát hiện hoạt động nguy hiểm\n" +
+                                "hoặc kết nối không ổn định.",
+                        "Mất kết nối",
+                        JOptionPane.WARNING_MESSAGE);
+                dispose();
+            });
         } catch (Exception e) {
             e.printStackTrace();
             statusMessage = "Mất kết nối tới server: " + e.getMessage();

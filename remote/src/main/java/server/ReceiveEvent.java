@@ -62,30 +62,52 @@ public class ReceiveEvent extends Thread {
                     String data = dis.readUTF();
                     String[] parts = data.split(",");
                     int command = Integer.parseInt(parts[0]);
+                    // --- BẮT ĐẦU KHỐI SWITCH ĐÃ GỘP ---
                     switch (command) {
-                        case -1:
+                        case -1: { // Thêm dấu {
                             int buttonMask = getButtonMask(Integer.parseInt(parts[1]));
-                            if (buttonMask != 0) 
-                            robot.mousePress(buttonMask);
-                            break;
-                        case -2: 
+                            if (buttonMask != 0) {
+                                robot.mousePress(buttonMask);
+                            }
+                            break; // Thêm break
+                        } // Thêm dấu }
+                        case -2: {
                             int releaseMask = getButtonMask(Integer.parseInt(parts[1]));
-                            if (releaseMask != 0)
-                             robot.mouseRelease(releaseMask);
+                            if (releaseMask != 0) {
+                                robot.mouseRelease(releaseMask);
+                            }
                             break;
-                        case -3:
-                            robot.keyPress(Integer.parseInt(parts[1]));
-                            break;
-                        case -4:
-                            robot.keyRelease(Integer.parseInt(parts[1]));
-                            break;
-                        case -5: 
+                        }
+                        case -3: { // Logic an toàn từ 43a...
+                            try {
+                                int keycode = Integer.parseInt(parts[1]);
+                                if (isValidKeyCode(keycode)) {
+                                    robot.keyPress(keycode);
+                                }
+                            } catch (Exception e) {
+                                System.out.println("Invalid keycode");
+                            }
+                            break; // Thêm break
+                        }
+                        case -4: { // Logic an toàn từ 43a...
+                            try {
+                                int keycode = Integer.parseInt(parts[1]);
+                                if (isValidKeyCode(keycode)) {
+                                    robot.keyRelease(keycode);
+                                }
+                            } catch (Exception e) {
+                                System.out.println("Invalid keycode");
+                            }
+                            break; // Thêm break
+                        }
+                        case -5: {
                             double xRatio = Double.parseDouble(parts[2]);
                             double yRatio = Double.parseDouble(parts[3]);
                             int x = (int) (xRatio * w);
                             int y = (int) (yRatio * h);
                             robot.mouseMove(x, y);
                             break;
+                        }
                         case -6:
                             robot.mousePress(Integer.parseInt(parts[1]));
                             robot.mouseRelease(Integer.parseInt(parts[1]));
@@ -93,18 +115,21 @@ public class ReceiveEvent extends Thread {
                         case -7:
                             robot.mouseWheel(Integer.parseInt(parts[1]));
                             break;
-                        case -8: 
-                            double xRatioD = Double.parseDouble(parts[2]);
-                            double yRatioD = Double.parseDouble(parts[3]);
-                            int xD = (int) (xRatioD * w);
-                            int yD = (int) (yRatioD * h);
-                            robot.mouseMove(xD, yD);
+                        case -8: {
+                            double xRatio = Double.parseDouble(parts[2]);
+                            double yRatio = Double.parseDouble(parts[3]);
+                            int x = (int) (xRatio * w);
+                            int y = (int) (yRatio * h);
+                            robot.mouseMove(x, y);
                             break;
+                        }
                         default:
                             break;
                     }
                 }
-            } else {
+            }
+                    // --- KẾT THÚC KHỐI SWITCH ---
+            else {
                 System.err.println("ReceiveEvent (Sharer): Lỗi! Tín hiệu đầu tiên không phải START_SESSION.");
             }
         } catch (IOException e) {
@@ -135,5 +160,17 @@ public class ReceiveEvent extends Thread {
              return InputEvent.BUTTON3_DOWN_MASK;
             default: return 0;
         }
+    }
+
+    private boolean isValidKeyCode(int keyCode) {
+
+        if (keyCode < 0 || keyCode > 65535) {
+            return false;
+        }
+        if (keyCode == 0) {
+            return false;
+        }
+
+        return true;
     }
 }

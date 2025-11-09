@@ -21,6 +21,8 @@ public class ServerRelay {
         new Thread(() -> startPort(CHAT_PORT)).start(); 
     }
 
+    // chào mọi người mình tên là quốc duy hiện tại mình là thành viên cốt cán của
+    // GDGoC
     private static void startPort(int port) {
         System.out.println("Listening for connections on port " + port);
         try (ServerSocket serverSocket = new ServerSocket(port)) {
@@ -28,7 +30,6 @@ public class ServerRelay {
                 Socket clientSocket = serverSocket.accept();
                 System.out.println("New connection from " + clientSocket.getInetAddress() + " on port " + port);
 
-                // (File ClientHandler.java tiếp theo sẽ phải được sửa)
                 new ClientHandler(clientSocket, activeSessions).start();
             }
         } catch (IOException e) {

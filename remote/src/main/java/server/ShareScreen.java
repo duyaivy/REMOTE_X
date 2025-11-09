@@ -1,7 +1,6 @@
 package server;
 
-import javax.swing.SwingUtilities;
-import common.ChatWindow; 
+import common.ChatWindow;
 import javax.imageio.IIOImage;
 import javax.imageio.ImageIO;
 import javax.imageio.ImageWriteParam;
@@ -24,8 +23,8 @@ public class ShareScreen implements Runnable {
 
     private int lastSentSeq = -1;
     private BufferedImage lastSentImage = null;
-    
-    private Socket screenSocket = null; 
+
+    private Socket screenSocket = null;
     private ChatWindow chatWindow;
 
     public ShareScreen(Socket screenSocket, Socket chatSocket) throws Exception {
@@ -33,7 +32,6 @@ public class ShareScreen implements Runnable {
         Thread shareThread = new Thread(this);
         shareThread.setDaemon(true);
         shareThread.start();
-    
         this.chatWindow = new ChatWindow(chatSocket, "Client");
         new ChatToggleButton(this.chatWindow);
     }
@@ -42,8 +40,6 @@ public class ShareScreen implements Runnable {
     public void run() {
         try {
             new Thread(new CaptureTask()).start();
-
-
             try (DataOutputStream out = new DataOutputStream(screenSocket.getOutputStream())) {
                 System.out.println("ip: " + screenSocket.getInetAddress());
                 ScreenFrame firstFrame;
@@ -52,6 +48,8 @@ public class ShareScreen implements Runnable {
                 }
                 out.writeInt(firstFrame.rawImage.getWidth());
                 out.writeInt(firstFrame.rawImage.getHeight());
+
+                out.flush();
 
                 sendFullFrame(out, firstFrame);
                 while (!screenSocket.isClosed()) {
