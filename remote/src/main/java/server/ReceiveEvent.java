@@ -62,15 +62,15 @@ public class ReceiveEvent extends Thread {
                     String data = dis.readUTF();
                     String[] parts = data.split(",");
                     int command = Integer.parseInt(parts[0]);
-                    // --- BẮT ĐẦU KHỐI SWITCH ĐÃ GỘP ---
+                   
                     switch (command) {
-                        case -1: { // Thêm dấu {
+                        case -1: { 
                             int buttonMask = getButtonMask(Integer.parseInt(parts[1]));
                             if (buttonMask != 0) {
                                 robot.mousePress(buttonMask);
                             }
-                            break; // Thêm break
-                        } // Thêm dấu }
+                            break; 
+                        } 
                         case -2: {
                             int releaseMask = getButtonMask(Integer.parseInt(parts[1]));
                             if (releaseMask != 0) {
@@ -78,7 +78,7 @@ public class ReceiveEvent extends Thread {
                             }
                             break;
                         }
-                        case -3: { // Logic an toàn từ 43a...
+                        case -3: {
                             try {
                                 int keycode = Integer.parseInt(parts[1]);
                                 if (isValidKeyCode(keycode)) {
@@ -87,9 +87,9 @@ public class ReceiveEvent extends Thread {
                             } catch (Exception e) {
                                 System.out.println("Invalid keycode");
                             }
-                            break; // Thêm break
+                            break; 
                         }
-                        case -4: { // Logic an toàn từ 43a...
+                        case -4: { 
                             try {
                                 int keycode = Integer.parseInt(parts[1]);
                                 if (isValidKeyCode(keycode)) {
@@ -98,7 +98,7 @@ public class ReceiveEvent extends Thread {
                             } catch (Exception e) {
                                 System.out.println("Invalid keycode");
                             }
-                            break; // Thêm break
+                            break;
                         }
                         case -5: {
                             double xRatio = Double.parseDouble(parts[2]);
@@ -128,7 +128,7 @@ public class ReceiveEvent extends Thread {
                     }
                 }
             }
-                    // --- KẾT THÚC KHỐI SWITCH ---
+                   
             else {
                 System.err.println("ReceiveEvent (Sharer): Lỗi! Tín hiệu đầu tiên không phải START_SESSION.");
             }
@@ -137,7 +137,7 @@ public class ReceiveEvent extends Thread {
         } catch (Exception e) {
             e.printStackTrace();
         } finally {
-            // Dọn dẹp tất cả 3 socket
+           
             try { if (controlSocket != null) controlSocket.close(); } catch (IOException e) {}
             try { if (screenSocket != null) screenSocket.close(); } catch (IOException e) {}
             try { if (chatSocket != null) chatSocket.close(); } catch (IOException e) {}

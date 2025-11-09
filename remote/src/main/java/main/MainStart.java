@@ -34,20 +34,13 @@ public class MainStart extends JFrame {
 
         Dimension screen = Toolkit.getDefaultToolkit().getScreenSize();
 
-        // -----------------------------------------------------------------
-        // --- BÊN TRÁI (CHO PHÉP ĐIỀU KHIỂN - SHARER) ---
-        // (Đã gộp UI từ cả 2 bản)
-        // -----------------------------------------------------------------
-        
         JPanel leftPanel = new JPanel(new GridBagLayout());
         leftPanel.setBorder(BorderFactory.createEmptyBorder(15, 15, 15, 15)); 
         
-        // --- KHAI BÁO gbcLeft (tên mới của gbc) ---
         GridBagConstraints gbcLeft = new GridBagConstraints();
         gbcLeft.insets = new Insets(8, 5, 8, 5); 
         gbcLeft.fill = GridBagConstraints.HORIZONTAL; 
 
-        // --- Tiêu đề (Từ HEAD) ---
         JLabel lblTitleLeft = new JLabel("Cho phép điều khiển");
         lblTitleLeft.setFont(FONT_TITLE);
         lblTitleLeft.setForeground(COLOR_TITLE);
@@ -57,17 +50,16 @@ public class MainStart extends JFrame {
         gbcLeft.anchor = GridBagConstraints.CENTER;
         leftPanel.add(lblTitleLeft, gbcLeft);
 
-        // --- Mô tả (Từ HEAD) ---
         JLabel lblDescLeft = new JLabel("Gửi ID và Mật khẩu này cho đối tác của bạn.");
         lblDescLeft.setFont(FONT_LABEL);
         gbcLeft.gridy = 1;
         leftPanel.add(lblDescLeft, gbcLeft);
         
-        // --- Reset GBC cho form (Từ HEAD) ---
+        
         gbcLeft.gridwidth = 1;
         gbcLeft.anchor = GridBagConstraints.WEST;
 
-        // --- Hàng 1: ID (Từ HEAD) ---
+       
         JLabel lblIDBan = new JLabel("ID của bạn");
         lblIDBan.setFont(FONT_LABEL);
         gbcLeft.gridx = 0;
@@ -82,7 +74,6 @@ public class MainStart extends JFrame {
         gbcLeft.fill = GridBagConstraints.HORIZONTAL; 
         leftPanel.add(txtIDBan, gbcLeft);
 
-        // --- Hàng 2: Mật khẩu (Từ HEAD) ---
         JLabel lblMatKhau = new JLabel("Mật khẩu");
         lblMatKhau.setFont(FONT_LABEL);
         gbcLeft.gridx = 0;
@@ -90,7 +81,6 @@ public class MainStart extends JFrame {
         gbcLeft.fill = GridBagConstraints.NONE;
         leftPanel.add(lblMatKhau, gbcLeft);
 
-        // --- Dùng JPasswordField (Từ HEAD) ---
         JPasswordField txtMatKhau = new JPasswordField("", 15); 
         txtMatKhau.setFont(FONT_FIELD);
         gbcLeft.gridx = 1;
@@ -98,7 +88,7 @@ public class MainStart extends JFrame {
         gbcLeft.fill = GridBagConstraints.HORIZONTAL;
         leftPanel.add(txtMatKhau, gbcLeft);
 
-        // --- Hàng 4: Checkbox (Từ 43a...) ---
+
         JCheckBox chkMonitoring = new JCheckBox("Bật giám sát bảo mật (AI)", true);
         chkMonitoring.setToolTipText("Giám sát các hoạt động nguy hiểm trên máy bằng AI");
         gbcLeft.gridx = 0;
@@ -107,7 +97,7 @@ public class MainStart extends JFrame {
         gbcLeft.anchor = GridBagConstraints.CENTER;
         leftPanel.add(chkMonitoring, gbcLeft);
 
-        // --- Hàng 5: Nút bấm (Từ HEAD, sửa gridy) ---
+   
         JButton btnStartShare = new JButton("Cho phép điều khiển");
         btnStartShare.setFont(FONT_LABEL);
         gbcLeft.gridx = 0;
@@ -117,14 +107,14 @@ public class MainStart extends JFrame {
         gbcLeft.anchor = GridBagConstraints.CENTER;
         leftPanel.add(btnStartShare, gbcLeft);
         
-        // --- LOGIC (ĐÃ GỘP) ---
+       
         btnStartShare.addActionListener(e -> {
             String username = txtIDBan.getText().trim();
             
-            // Lấy password từ JPasswordField (Từ HEAD)
+           
             String password = new String(txtMatKhau.getPassword()).trim(); 
             
-            // Lấy trạng thái checkbox (Từ 43a...)
+          
             boolean enableMonitoring = chkMonitoring.isSelected(); 
 
             if (username.isEmpty() || password.isEmpty()) {
@@ -133,14 +123,14 @@ public class MainStart extends JFrame {
                 btnStartShare.setEnabled(false);
                 btnStartShare.setText("Đang kết nối...");
                 SwingWorker<Void, Void> worker = new SwingWorker<Void, Void>() {
-                    // Giữ logic kết nối 3 socket (Từ HEAD)
+                  
                     private Socket socketScreen, socketControl, socketChat; 
                     private GraphicsEnvironment gEnv = GraphicsEnvironment.getLocalGraphicsEnvironment();
                     private GraphicsDevice gDev = gEnv.getDefaultScreenDevice();
 
                     @Override
                     protected Void doInBackground() throws Exception {
-                        // Giữ logic doInBackground (Từ HEAD)
+                       
                         try {
                             socketScreen = new Socket(ipServer, 5000);
                             socketControl = new Socket(ipServer, 6000);
@@ -173,36 +163,36 @@ public class MainStart extends JFrame {
                     
                     @Override
                     protected void done() {
-                        // Gộp logic done()
+                     
                         try {
                             get(); 
                             JOptionPane.showMessageDialog(MainStart.this, "Kết nối thành công! Đang chờ đối tác...");
-                            btnStartShare.setText("Đang chia sẻ..."); // Từ HEAD
+                            btnStartShare.setText("Đang chia sẻ..."); 
                             
-                            // Thêm logic MonitoringManager (Từ 43a...)
-                            if (enableMonitoring) {
-                                new Thread(() -> {
-                                    try {
-                                        MonitoringManager.getInstance().startMonitoring(socketScreen, socketChat,
-                                                socketControl);
-                                    } catch (Exception monitorEx) {
-                                        JOptionPane.showMessageDialog(MainStart.this,
-                                                "Lỗi khi khởi tạo giám sát AI: " + monitorEx.getMessage(),
-                                                "Lỗi", JOptionPane.ERROR_MESSAGE);
-                                        monitorEx.printStackTrace();
-                                    }
-                                }).start();
-                            } else {
-                                System.out.println("[MAIN] Monitoring disabled by user");
-                            }
+                          
+                            // if (enableMonitoring) {
+                            //     new Thread(() -> {
+                            //         try {
+                            //             MonitoringManager.getInstance().startMonitoring(socketScreen, socketChat,
+                            //                     socketControl);
+                            //         } catch (Exception monitorEx) {
+                            //             JOptionPane.showMessageDialog(MainStart.this,
+                            //                     "Lỗi khi khởi tạo giám sát AI: " + monitorEx.getMessage(),
+                            //                     "Lỗi", JOptionPane.ERROR_MESSAGE);
+                            //             monitorEx.printStackTrace();
+                            //         }
+                            //     }).start();
+                            // } else {
+                            //     System.out.println("[MAIN] Monitoring disabled by user");
+                            // }
                             
-                            // Giữ logic gọi ReceiveEvent (Từ HEAD)
+                           
                             Robot rb = new Robot(gDev);
                             new ReceiveEvent(socketControl, socketScreen, socketChat, rb, screen.height, screen.width, btnStartShare);
                         } catch (Exception ex) {
                             ex.printStackTrace();
                             JOptionPane.showMessageDialog(MainStart.this, "Không thể kết nối đến server: " + ex.getMessage(), "Lỗi", JOptionPane.ERROR_MESSAGE);
-                            // Giữ logic dọn dẹp (Từ HEAD)
+                            
                             try { if (socketScreen != null) socketScreen.close(); } catch (Exception e) {}
                             try { if (socketControl != null) socketControl.close(); } catch (Exception e) {}
                             try { if (socketChat != null) socketChat.close(); } catch (Exception e) {}
@@ -215,17 +205,11 @@ public class MainStart extends JFrame {
             }
         });
 
-        // --- KHÔNG CÓ CODE LỖI (gbc) Ở ĐÂY NỮA ---
-
-        // -----------------------------------------------------------------
-        // --- BÊN PHẢI (ĐIỀU KHIỂN - VIEWER) ---
-        // (Giữ UI từ HEAD, Logic từ HEAD)
-        // -----------------------------------------------------------------
-
+    
         JPanel rightPanel = new JPanel(new GridBagLayout());
         rightPanel.setBorder(BorderFactory.createEmptyBorder(15, 15, 15, 15));
         
-        // --- KHAI BÁO gbcRight (tên mới của gbc2) ---
+        
         GridBagConstraints gbcRight = new GridBagConstraints();
         gbcRight.insets = new Insets(8, 5, 8, 5);
         gbcRight.fill = GridBagConstraints.HORIZONTAL;
@@ -284,7 +268,7 @@ public class MainStart extends JFrame {
         gbcRight.anchor = GridBagConstraints.CENTER;
         rightPanel.add(btnStart, gbcRight);
 
-        // --- LOGIC (Giữ logic từ HEAD để sửa lỗi "tín hiệu lạ") ---
+       
         btnStart.addActionListener(e -> {
             String partnerID = txtIDDT.getText().trim();
             String partnerPassword = new String(txtMKDT.getPassword()).trim(); 
@@ -298,18 +282,18 @@ public class MainStart extends JFrame {
             btnStart.setText("Đang kết nối...");
 
             SwingWorker<Void, Void> controlWorker = new SwingWorker<Void, Void>() {
-                // Giữ logic 6 tham số (Từ HEAD)
+               
                 private Socket socketScreen, socketControl, socketChat;
                 private DataInputStream disControl; // Giữ luồng đọc
                 private float remoteWidth, remoteHeight;
-                // --- THÊM KHAI BÁO (Từ 43a...) ---
+               
                 private GraphicsEnvironment gEnv = GraphicsEnvironment.getLocalGraphicsEnvironment();
                 private GraphicsDevice gDev = gEnv.getDefaultScreenDevice();
 
 
                 @Override
                 protected Void doInBackground() throws Exception {
-                    // Giữ logic 6 tham số (Từ HEAD)
+                   
                     try {
                         socketScreen = new Socket(ipServer, 5000);
                         socketControl = new Socket(ipServer, 6000);
@@ -351,7 +335,7 @@ public class MainStart extends JFrame {
 
                 @Override
                 protected void done() {
-                    // Giữ logic 6 tham số (Từ HEAD)
+                   
                     try {
                         get();
                         JOptionPane.showMessageDialog(MainStart.this, "Kết nối thành công! Bắt đầu điều khiển.");
@@ -368,14 +352,10 @@ public class MainStart extends JFrame {
             controlWorker.execute();
         });
 
-        // -----------------------------------------------------------------
-        // --- THÊM 2 PANEL VÀO FRAME CHÍNH ---
-        // -----------------------------------------------------------------
         add(leftPanel);
         add(rightPanel);
     }
 
-    // --- MAIN (GỘP CẢ HAI) ---
     public static void main(String[] args) {
 
         try {
@@ -386,7 +366,7 @@ public class MainStart extends JFrame {
 
         SwingUtilities.invokeLater(() -> {
             try {
-                // Giữ 'localhost' (Từ HEAD) vì nó an toàn hơn
+                
                 String ipServer = "localhost"; 
                 // String ipServer = "192.168.2.95"; // (Từ 43a...)
                 
