@@ -9,7 +9,6 @@ import java.util.Map;
 public class ServerRelay {
     private static final int SCREEN_PORT = 5000;
     private static final int CONTROL_PORT = 6000;
-    // 1. Mở thêm PORT 7000 cho Chat
     private static final int CHAT_PORT = 7000;
 
     private static final Map<String, Session> activeSessions = new ConcurrentHashMap<>();
