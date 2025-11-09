@@ -1,3 +1,4 @@
+<<<<<<< HEAD
 <project xmlns="http://maven.apache.org/POM/4.0.0" xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xsi:schemaLocation="http://maven.apache.org/POM/4.0.0 https://maven.apache.org/xsd/maven-4.0.0.xsd">
   <modelVersion>4.0.0</modelVersion>
   <groupId>remote.desktop</groupId>
@@ -5,6 +6,18 @@
   <version>0.0.1-SNAPSHOT</version>
   <name>RemoteX</name>
    <dependencies>
+=======
+<project xmlns="http://maven.apache.org/POM/4.0.0" xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
+         xsi:schemaLocation="http://maven.apache.org/POM/4.0.0 https://maven.apache.org/xsd/maven-4.0.0.xsd">
+    <modelVersion>4.0.0</modelVersion>
+
+    <groupId>remote.desktop</groupId>
+    <artifactId>remote</artifactId>
+    <version>0.0.1</version>
+    <name>RemoteX</name>
+
+    <dependencies>
+>>>>>>> 2f76bcd598fc97981eda592598268e94a91dd828
         <dependency>
             <groupId>com.fasterxml.jackson.core</groupId>
             <artifactId>jackson-databind</artifactId>
@@ -16,10 +29,45 @@
             <artifactId>zip4j</artifactId>
             <version>2.11.5</version>
         </dependency>
+<<<<<<< HEAD
+=======
+
+>>>>>>> 2f76bcd598fc97981eda592598268e94a91dd828
         <dependency>
             <groupId>com.microsoft.onnxruntime</groupId>
             <artifactId>onnxruntime</artifactId>
             <version>1.16.3</version>
         </dependency>
     </dependencies>
+<<<<<<< HEAD
 </project>
+=======
+
+    <build>
+        <plugins>
+            <plugin>
+                <groupId>org.apache.maven.plugins</groupId>
+                <artifactId>maven-shade-plugin</artifactId>
+                <version>3.5.0</version>
+                <executions>
+                    <execution>
+                        <phase>package</phase>
+                        <goals>
+                            <goal>shade</goal>
+                        </goals>
+                        <configuration>
+                            <transformers>
+                                <transformer implementation="org.apache.maven.plugins.shade.resource.ManifestResourceTransformer">
+                                    <mainClass>main.MainStart</mainClass>
+                                </transformer>
+                            </transformers>
+                        </configuration>
+                    </execution>
+                </executions>
+            </plugin>
+
+        </plugins>
+    </build>
+
+</project>
+>>>>>>> 2f76bcd598fc97981eda592598268e94a91dd828

@@ -21,17 +21,19 @@ public class ReceiveScreen extends JFrame {
         
         // ... (Toàn bộ code UI, JMenuBar, setSize, ... của bạn giữ nguyên) ...
         setTitle("RemoteX Screen Viewer");
+
         Dimension screenSize = Toolkit.getDefaultToolkit().getScreenSize();
         double remoteWidth = width;
         double remoteHeight = height;
-        if (remoteWidth > screenSize.width || remoteHeight > screenSize.height) {
-            double widthRatio = screenSize.width / remoteWidth;
-            double heightRatio = screenSize.height / remoteHeight;
-            double scaleFactor = Math.min(widthRatio, heightRatio);
-            width = (int) (remoteWidth * scaleFactor);
-            height = (int) (remoteHeight * scaleFactor);
-        }
-        setSize((int) (int) width, (int) height);
+
+        double widthRatio = screenSize.width / remoteWidth;
+        double heightRatio = screenSize.height / remoteHeight;
+        double scaleFactor = Math.min(widthRatio, heightRatio);
+
+        width = (int) (remoteWidth * scaleFactor);
+        height = (int) (remoteHeight * scaleFactor);
+
+        setSize((int) width, (int) height);
         setLocationRelativeTo(null);
         setDefaultCloseOperation(JFrame.DISPOSE_ON_CLOSE);
         screenPanel = new JPanel() {
@@ -51,14 +53,12 @@ public class ReceiveScreen extends JFrame {
             }
         };
         add(screenPanel);
-
-        // Khởi động Chat (chạy ngầm)
         this.chatWindow = new ChatWindow(chatSocket, "Server");
-        
-        // Tạo Menu Bar
+
         JMenuBar menuBar = new JMenuBar();
         JMenu toolsMenu = new JMenu("Công cụ");
         JMenuItem chatMenuItem = new JMenuItem("Mở Chat");
+
         chatMenuItem.addActionListener(e -> {
             if (this.chatWindow != null) {
                 this.chatWindow.showWindow();
@@ -67,9 +67,7 @@ public class ReceiveScreen extends JFrame {
         toolsMenu.add(chatMenuItem);
         menuBar.add(toolsMenu);
         this.setJMenuBar(menuBar);
-        
-        setVisible(true); 
-
+        setVisible(true);
         new Thread(() -> receiveFrames(dataSocket)).start();
 
         // 3. Khởi động luồng GỬI điều khiển ngay

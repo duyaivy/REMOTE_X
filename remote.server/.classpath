@@ -9,7 +9,14 @@
 	<classpathentry excluding="**" kind="src" output="target/classes" path="src/main/resources">
 		<attributes>
 			<attribute name="maven.pomderived" value="true"/>
+<<<<<<< HEAD
 			<attribute name="optional" value="true"/>
+=======
+<<<<<<< HEAD
+			<attribute name="optional" value="true"/>
+=======
+>>>>>>> ab8d945b26ee7cfde584acf622f5eb6e628d1707
+>>>>>>> 2f76bcd598fc97981eda592598268e94a91dd828
 		</attributes>
 	</classpathentry>
 	<classpathentry kind="src" output="target/test-classes" path="src/test/java">
@@ -23,7 +30,14 @@
 		<attributes>
 			<attribute name="maven.pomderived" value="true"/>
 			<attribute name="test" value="true"/>
+<<<<<<< HEAD
 			<attribute name="optional" value="true"/>
+=======
+<<<<<<< HEAD
+			<attribute name="optional" value="true"/>
+=======
+>>>>>>> ab8d945b26ee7cfde584acf622f5eb6e628d1707
+>>>>>>> 2f76bcd598fc97981eda592598268e94a91dd828
 		</attributes>
 	</classpathentry>
 	<classpathentry kind="con" path="org.eclipse.jdt.launching.JRE_CONTAINER/org.eclipse.jdt.internal.debug.ui.launcher.StandardVMType/JavaSE-1.8">
@@ -36,6 +50,10 @@
 			<attribute name="maven.pomderived" value="true"/>
 		</attributes>
 	</classpathentry>
+<<<<<<< HEAD
+=======
+<<<<<<< HEAD
+>>>>>>> 2f76bcd598fc97981eda592598268e94a91dd828
 	<classpathentry kind="src" path="target/generated-sources/annotations">
 		<attributes>
 			<attribute name="optional" value="true"/>
@@ -53,5 +71,10 @@
 			<attribute name="test" value="true"/>
 		</attributes>
 	</classpathentry>
+<<<<<<< HEAD
+=======
+=======
+>>>>>>> ab8d945b26ee7cfde584acf622f5eb6e628d1707
+>>>>>>> 2f76bcd598fc97981eda592598268e94a91dd828
 	<classpathentry kind="output" path="target/classes"/>
 </classpath>

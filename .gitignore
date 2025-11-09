@@ -1,2 +1,4 @@
 remote/target/
-remote.server/target/
+**/target/
+*.class
+*.jar

@@ -1,4 +1,4 @@
-package common; // Hoặc package 'shared' của bạn
+package common;
 
 import javax.swing.*;
 import javax.swing.text.*; // <-- Import thêm để hỗ trợ style

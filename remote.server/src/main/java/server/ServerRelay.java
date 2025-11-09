@@ -1,4 +1,3 @@
-
 package server;
 
 import java.util.concurrent.ConcurrentHashMap;
@@ -10,15 +9,14 @@ import java.util.Map;
 public class ServerRelay {
     private static final int SCREEN_PORT = 5000;
     private static final int CONTROL_PORT = 6000;
-   
-    private static final int CHAT_PORT = 7000; 
-    
+    private static final int CHAT_PORT = 7000;
+
     private static final Map<String, Session> activeSessions = new ConcurrentHashMap<>();
 
     public static void main(String[] args) {
         new Thread(() -> startPort(SCREEN_PORT)).start();
         new Thread(() -> startPort(CONTROL_PORT)).start();
-        new Thread(() -> startPort(CHAT_PORT)).start(); 
+        new Thread(() -> startPort(CHAT_PORT)).start();
     }
 
     // chào mọi người mình tên là quốc duy hiện tại mình là thành viên cốt cán của
