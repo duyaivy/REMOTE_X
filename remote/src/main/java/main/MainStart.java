@@ -4,13 +4,13 @@ import javax.swing.*;
 import javax.swing.border.*;
 
 import client.ReceiveScreen;
-import monitor.MonitoringManager; // <-- THÊM IMPORT TỪ BẢN MỚI
+import monitor.MonitoringManager; 
 
 import java.awt.*;
 import java.io.DataInputStream;
 import java.io.DataOutputStream;
 import java.net.Socket;
-import java.awt.Robot; 
+
 import server.ReceiveEvent;
 import server.ShareScreen;
 
@@ -18,96 +18,127 @@ public class MainStart extends JFrame {
 
     private static final int CHAT_PORT = 7000;
 
-    // --- CÁC BIẾN STYLE MỚI (Giống UltraViewer) ---
-    private final Color COLOR_TITLE = new Color(0, 114, 188); // Màu xanh dương
-    private final Font FONT_TITLE = new Font("Arial", Font.BOLD, 16);
-    private final Font FONT_LABEL = new Font("Arial", Font.PLAIN, 12);
-    private final Font FONT_FIELD = new Font("Arial", Font.BOLD, 14);
-    // --- KẾT THÚC STYLE ---
-
     public MainStart(String ipServer) {
-        setTitle("Remote X");
-        setSize(800, 500); 
+              setTitle("Remote X");
+        setSize(900, 520); 
         setDefaultCloseOperation(EXIT_ON_CLOSE);
         setLocationRelativeTo(null);
-        setLayout(new GridLayout(1, 2, 10, 10));
+        
+        getContentPane().setBackground(UIHelper.COLOR_BACKGROUND); 
+        setLayout(new BorderLayout(0, 0));
+
+
+        setJMenuBar(UIHelper.createStyledMenuBar());
+
+        JPanel mainPanel = new JPanel(new GridLayout(1, 2, 15, 0));
+        mainPanel.setBackground(UIHelper.COLOR_BACKGROUND);
+        mainPanel.setBorder(BorderFactory.createEmptyBorder(15, 15, 15, 15));
 
         Dimension screen = Toolkit.getDefaultToolkit().getScreenSize();
 
-        JPanel leftPanel = new JPanel(new GridBagLayout());
-        leftPanel.setBorder(BorderFactory.createEmptyBorder(15, 15, 15, 15)); 
         
+        
+        JPanel leftPanel = UIHelper.createStyledPanel();
+
+      
+        JPanel leftHeader = UIHelper.createHeaderPanel("Cho phép điều khiển", UIHelper.createAntennaIcon());
+        leftPanel.add(leftHeader, BorderLayout.NORTH);
+
+        JPanel leftContent = new JPanel(new GridBagLayout());
+        leftContent.setBackground(Color.WHITE);
+        leftContent.setBorder(BorderFactory.createEmptyBorder(15, 20, 20, 20));
         GridBagConstraints gbcLeft = new GridBagConstraints();
-        gbcLeft.insets = new Insets(8, 5, 8, 5); 
+        gbcLeft.insets = new Insets(5, 5, 5, 5); 
         gbcLeft.fill = GridBagConstraints.HORIZONTAL; 
-
-        JLabel lblTitleLeft = new JLabel("Cho phép điều khiển");
-        lblTitleLeft.setFont(FONT_TITLE);
-        lblTitleLeft.setForeground(COLOR_TITLE);
-        gbcLeft.gridx = 0;
-        gbcLeft.gridy = 0;
-        gbcLeft.gridwidth = 2; 
-        gbcLeft.anchor = GridBagConstraints.CENTER;
-        leftPanel.add(lblTitleLeft, gbcLeft);
-
-        JLabel lblDescLeft = new JLabel("Gửi ID và Mật khẩu này cho đối tác của bạn.");
-        lblDescLeft.setFont(FONT_LABEL);
-        gbcLeft.gridy = 1;
-        leftPanel.add(lblDescLeft, gbcLeft);
-        
-        
-        gbcLeft.gridwidth = 1;
         gbcLeft.anchor = GridBagConstraints.WEST;
 
        
-        JLabel lblIDBan = new JLabel("ID của bạn");
-        lblIDBan.setFont(FONT_LABEL);
+        JLabel lblDescLeft = new JLabel("<html>Gửi ID và Mật khẩu này cho đối tác của bạn.</html>");
+        lblDescLeft.setFont(UIHelper.FONT_LABEL);
+        lblDescLeft.setForeground(UIHelper.COLOR_TEXT_DARK);
         gbcLeft.gridx = 0;
-        gbcLeft.gridy = 2;
+        gbcLeft.gridy = 0;
+        gbcLeft.gridwidth = 2; 
+        gbcLeft.insets = new Insets(0, 5, 20, 5);
+        leftContent.add(lblDescLeft, gbcLeft);
+        
+       
+        gbcLeft.gridwidth = 1;
+        gbcLeft.insets = new Insets(5, 5, 5, 5);
+
+        
+        JLabel lblIDBan = new JLabel("ID của bạn");
+        lblIDBan.setFont(UIHelper.FONT_LABEL);
+        lblIDBan.setForeground(UIHelper.COLOR_TEXT_DARK);
+        gbcLeft.gridx = 0;
+        gbcLeft.gridy = 1;
         gbcLeft.fill = GridBagConstraints.NONE;
-        leftPanel.add(lblIDBan, gbcLeft);
+        gbcLeft.weightx = 0.0;
+        leftContent.add(lblIDBan, gbcLeft);
 
         JTextField txtIDBan = new JTextField("", 15);
-        txtIDBan.setFont(FONT_FIELD);
+        txtIDBan.setFont(UIHelper.FONT_FIELD);
+        UIHelper.styleTextField(txtIDBan);
         gbcLeft.gridx = 1;
-        gbcLeft.gridy = 2;
+        gbcLeft.gridy = 1;
         gbcLeft.fill = GridBagConstraints.HORIZONTAL; 
-        leftPanel.add(txtIDBan, gbcLeft);
+        gbcLeft.weightx = 1.0;
+        leftContent.add(txtIDBan, gbcLeft);
 
+        
         JLabel lblMatKhau = new JLabel("Mật khẩu");
-        lblMatKhau.setFont(FONT_LABEL);
+        lblMatKhau.setFont(UIHelper.FONT_LABEL);
+        lblMatKhau.setForeground(UIHelper.COLOR_TEXT_DARK);
         gbcLeft.gridx = 0;
-        gbcLeft.gridy = 3;
+        gbcLeft.gridy = 2;
         gbcLeft.fill = GridBagConstraints.NONE;
-        leftPanel.add(lblMatKhau, gbcLeft);
+        gbcLeft.weightx = 0.0;
+        leftContent.add(lblMatKhau, gbcLeft);
 
         JPasswordField txtMatKhau = new JPasswordField("", 15); 
-        txtMatKhau.setFont(FONT_FIELD);
+        txtMatKhau.setFont(UIHelper.FONT_FIELD);
+        UIHelper.styleTextField(txtMatKhau);
         gbcLeft.gridx = 1;
-        gbcLeft.gridy = 3;
+        gbcLeft.gridy = 2;
         gbcLeft.fill = GridBagConstraints.HORIZONTAL;
-        leftPanel.add(txtMatKhau, gbcLeft);
-
-
+        gbcLeft.weightx = 1.0;
+        leftContent.add(txtMatKhau, gbcLeft);
+        
+        
         JCheckBox chkMonitoring = new JCheckBox("Bật giám sát bảo mật (AI)", true);
         chkMonitoring.setToolTipText("Giám sát các hoạt động nguy hiểm trên máy bằng AI");
+        chkMonitoring.setFont(UIHelper.FONT_LABEL);
+        chkMonitoring.setBackground(Color.WHITE);
+        chkMonitoring.setForeground(UIHelper.COLOR_TEXT_DARK);
         gbcLeft.gridx = 0;
-        gbcLeft.gridy = 4;
+        gbcLeft.gridy = 3;
         gbcLeft.gridwidth = 2;
-        gbcLeft.anchor = GridBagConstraints.CENTER;
-        leftPanel.add(chkMonitoring, gbcLeft);
+        gbcLeft.anchor = GridBagConstraints.WEST;
+        gbcLeft.fill = GridBagConstraints.NONE;
+        gbcLeft.weightx = 0.0;
+        gbcLeft.insets = new Insets(15, 5, 15, 5); 
+        leftContent.add(chkMonitoring, gbcLeft);
 
-   
-        JButton btnStartShare = new JButton("Cho phép điều khiển");
-        btnStartShare.setFont(FONT_LABEL);
+        
+        JPanel spacerLeft = new JPanel();
+        spacerLeft.setOpaque(false);
+        gbcLeft.gridy = 4;
+        gbcLeft.weighty = 1.0;
+        leftContent.add(spacerLeft, gbcLeft);
+        
+        
+        JButton btnStartShare = UIHelper.createStyledButton("Cho phép điều khiển");
         gbcLeft.gridx = 0;
-        gbcLeft.gridy = 5; // Sửa gridy
+        gbcLeft.gridy = 5; 
         gbcLeft.gridwidth = 2;
         gbcLeft.fill = GridBagConstraints.NONE; 
         gbcLeft.anchor = GridBagConstraints.CENTER;
-        leftPanel.add(btnStartShare, gbcLeft);
-        
-       
+        gbcLeft.weighty = 0.0;
+        gbcLeft.insets = new Insets(0, 5, 10, 5); 
+        leftContent.add(btnStartShare, gbcLeft);
+
+        leftPanel.add(leftContent, BorderLayout.CENTER);
+
         btnStartShare.addActionListener(e -> {
             String username = txtIDBan.getText().trim();
             
@@ -206,69 +237,81 @@ public class MainStart extends JFrame {
         });
 
     
-        JPanel rightPanel = new JPanel(new GridBagLayout());
-        rightPanel.setBorder(BorderFactory.createEmptyBorder(15, 15, 15, 15));
-        
-        
+      JPanel rightPanel = UIHelper.createStyledPanel();
+
+     
+        JPanel rightHeader = UIHelper.createHeaderPanel("Điều khiển máy tính khác", UIHelper.createComputerIcon());
+        rightPanel.add(rightHeader, BorderLayout.NORTH);
+        JPanel rightContent = new JPanel(new GridBagLayout());
+        rightContent.setBackground(Color.WHITE);
+        rightContent.setBorder(BorderFactory.createEmptyBorder(15, 20, 20, 20));
         GridBagConstraints gbcRight = new GridBagConstraints();
-        gbcRight.insets = new Insets(8, 5, 8, 5);
+        gbcRight.insets = new Insets(5, 5, 5, 5);
         gbcRight.fill = GridBagConstraints.HORIZONTAL;
-
-        JLabel lblTitleRight = new JLabel("Điều khiển máy tính khác");
-        lblTitleRight.setFont(FONT_TITLE);
-        lblTitleRight.setForeground(COLOR_TITLE);
-        gbcRight.gridx = 0;
-        gbcRight.gridy = 0;
-        gbcRight.gridwidth = 2;
-        gbcRight.anchor = GridBagConstraints.CENTER;
-        rightPanel.add(lblTitleRight, gbcRight);
-
-        JLabel lblDescRight = new JLabel("Nhập ID và Mật khẩu của máy bạn cần điều khiển.");
-        lblDescRight.setFont(FONT_LABEL);
-        gbcRight.gridy = 1;
-        rightPanel.add(lblDescRight, gbcRight);
-
-        gbcRight.gridwidth = 1;
         gbcRight.anchor = GridBagConstraints.WEST;
 
+        JLabel lblDescRight = new JLabel("<html>Nhập ID và Mật khẩu của máy bạn cần điều khiển.</html>");
+        lblDescRight.setFont(UIHelper.FONT_LABEL);
+        lblDescRight.setForeground(UIHelper.COLOR_TEXT_DARK);
+        gbcRight.gridy = 0;
+        gbcRight.gridx = 0; 
+        gbcRight.gridwidth = 2;
+        gbcRight.insets = new Insets(0, 5, 20, 5);
+        rightContent.add(lblDescRight, gbcRight);
+
+        // --- Reset GBC ---
+        gbcRight.gridwidth = 1;
+        gbcRight.insets = new Insets(5, 5, 5, 5);
+
         JLabel lblIDDT = new JLabel("ID đối tác");
-        lblIDDT.setFont(FONT_LABEL);
-        gbcRight.gridx = 0;
-        gbcRight.gridy = 2;
-        gbcRight.fill = GridBagConstraints.NONE;
-        rightPanel.add(lblIDDT, gbcRight);
+        lblIDDT.setFont(UIHelper.FONT_LABEL);
+        lblIDDT.setForeground(UIHelper.COLOR_TEXT_DARK);
+        gbcRight.gridx = 0; gbcRight.gridy = 1; gbcRight.fill = GridBagConstraints.NONE;
+        gbcRight.weightx = 0.0;
+        rightContent.add(lblIDDT, gbcRight);
 
         JTextField txtIDDT = new JTextField(15);
-        txtIDDT.setFont(FONT_FIELD);
-        gbcRight.gridx = 1;
-        gbcRight.gridy = 2;
+        txtIDDT.setFont(UIHelper.FONT_FIELD);
+        UIHelper.styleTextField(txtIDDT);
+        gbcRight.gridx = 1; gbcRight.gridy = 1; 
+        gbcRight.weightx = 1.0;
         gbcRight.fill = GridBagConstraints.HORIZONTAL;
-        rightPanel.add(txtIDDT, gbcRight);
+        rightContent.add(txtIDDT, gbcRight);
 
         JLabel lblMKDT = new JLabel("Mật khẩu");
-        lblMKDT.setFont(FONT_LABEL);
-        gbcRight.gridx = 0;
-        gbcRight.gridy = 3;
+        lblMKDT.setFont(UIHelper.FONT_LABEL);
+        lblMKDT.setForeground(UIHelper.COLOR_TEXT_DARK);
+        gbcRight.gridx = 0; gbcRight.gridy = 2; 
+        gbcRight.weightx = 0.0;
         gbcRight.fill = GridBagConstraints.NONE;
-        rightPanel.add(lblMKDT, gbcRight);
+        rightContent.add(lblMKDT, gbcRight);
 
         JPasswordField txtMKDT = new JPasswordField(15);
-        txtMKDT.setFont(FONT_FIELD);
-        gbcRight.gridx = 1;
-        gbcRight.gridy = 3;
+        txtMKDT.setFont(UIHelper.FONT_FIELD);
+        UIHelper.styleTextField(txtMKDT);
+        gbcRight.gridx = 1; gbcRight.gridy = 2; 
+        gbcRight.weightx = 1.0;
         gbcRight.fill = GridBagConstraints.HORIZONTAL;
-        rightPanel.add(txtMKDT, gbcRight);
-
-        JButton btnStart = new JButton("Bắt đầu điều khiển");
-        btnStart.setFont(FONT_LABEL);
+        rightContent.add(txtMKDT, gbcRight);
+        
+        
+        JPanel spacerPanel = new JPanel(); 
+        spacerPanel.setOpaque(false);
         gbcRight.gridx = 0;
-        gbcRight.gridy = 4;
+        gbcRight.gridy = 3;
         gbcRight.gridwidth = 2;
-        gbcRight.fill = GridBagConstraints.NONE;
-        gbcRight.anchor = GridBagConstraints.CENTER;
-        rightPanel.add(btnStart, gbcRight);
+        gbcRight.weighty = 1.0;
+        rightContent.add(spacerPanel, gbcRight);
 
-       
+        JButton btnStart = UIHelper.createStyledButton("Bắt đầu điều khiển");
+        gbcRight.gridx = 0; gbcRight.gridy = 4;
+        gbcRight.gridwidth = 2; gbcRight.fill = GridBagConstraints.NONE; 
+        gbcRight.anchor = GridBagConstraints.CENTER;
+        gbcRight.weighty = 0.0;
+        gbcRight.insets = new Insets(0, 5, 10, 5);
+        rightContent.add(btnStart, gbcRight);
+
+        rightPanel.add(rightContent, BorderLayout.CENTER);
         btnStart.addActionListener(e -> {
             String partnerID = txtIDDT.getText().trim();
             String partnerPassword = new String(txtMKDT.getPassword()).trim(); 
@@ -352,10 +395,12 @@ public class MainStart extends JFrame {
             controlWorker.execute();
         });
 
-        add(leftPanel);
-        add(rightPanel);
-    }
+        mainPanel.add(leftPanel);
+        mainPanel.add(rightPanel);
+        add(mainPanel, BorderLayout.CENTER);
 
+        add(UIHelper.createStatusBar(), BorderLayout.SOUTH);
+    }
     public static void main(String[] args) {
 
         try {
@@ -381,3 +426,4 @@ public class MainStart extends JFrame {
         });
     }
 }
+

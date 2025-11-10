@@ -1,5 +1,4 @@
 package server;
-
 import java.util.concurrent.ConcurrentHashMap;
 import java.io.IOException;
 import java.net.ServerSocket;
@@ -19,8 +18,7 @@ public class ServerRelay {
         new Thread(() -> startPort(CHAT_PORT)).start();
     }
 
-    // chào mọi người mình tên là quốc duy hiện tại mình là thành viên cốt cán của
-    // GDGoC
+
     private static void startPort(int port) {
         System.out.println("Listening for connections on port " + port);
         try (ServerSocket serverSocket = new ServerSocket(port)) {
