@@ -71,14 +71,33 @@ public class ClientHandler extends Thread {
         synchronized (activeSessions) {
             Session session = activeSessions.get(username);
             if (session == null) {
+
                 if (activeSessions.size() >= MAX_CLIENTS) {
                     dos.writeUTF("false,Server is full");
-                    clientSocket.close();// Đóng socket vì không thể tạo session
+                    clientSocket.close();
                     return;
                 }
                 session = new Session(username, password, w, h, activeSessions);
                 activeSessions.put(username, session);
             }
+
+            if(session.isActive()) {
+                System.out.println("[ClientHandler] REJECT: Session is ACTIVE, not allowing duplicate sharer");
+                dos.writeUTF("false,Session is already active");
+                clientSocket.close();
+                return;
+            }
+            if (!session.checkPassword(password)) {
+                    System.out.println("[ClientHandler] REJECT: Password mismatch for session: " + username);
+                    dos.writeUTF("false,Username already exists with different password");
+                    clientSocket.close();
+                    return;
+                }
+                System.out.println("[ClientHandler] ACCEPT: Session is WAITING, allowing reconnection");
+
+            
+
+            
             session.setSharerSocket(clientSocket, connectType);
 
             if (session.isSharerReady()) {
@@ -114,6 +133,7 @@ public class ClientHandler extends Thread {
         }
 
         // Giao socket cho session VÀ để Session tự gửi tín hiệu "START_SESSION"
+         System.out.println("[ClientHandler] Viewer connecting to session: " + username + ", status: " + session.getStatus());
 
         session.setViewerSocketAndAttemptRelay(clientSocket, connectType);
         

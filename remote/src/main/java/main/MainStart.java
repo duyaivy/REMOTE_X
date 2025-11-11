@@ -333,6 +333,8 @@ public class MainStart extends JFrame {
                 private GraphicsEnvironment gEnv = GraphicsEnvironment.getLocalGraphicsEnvironment();
                 private GraphicsDevice gDev = gEnv.getDefaultScreenDevice();
 
+                private String serverErrorMessage = null;
+
 
                 @Override
                 protected Void doInBackground() throws Exception {
@@ -357,9 +359,18 @@ public class MainStart extends JFrame {
                         String responseScreen = disScreen.readUTF();
                         String responseControl = this.disControl.readUTF(); 
                         String responseChat = disChat.readUTF(); 
-                        
-                        if (responseScreen.startsWith("false") || responseControl.startsWith("false") || responseChat.startsWith("false")) {
-                            throw new Exception("Server response: " + responseScreen + " | " + responseControl + " | " + responseChat);
+                       
+                        if (responseScreen.startsWith("false")) {
+                            serverErrorMessage = responseScreen.split(",")[1]; // Lấy "Session not found"
+                            throw new Exception(serverErrorMessage);
+                        }
+                        if (responseControl.startsWith("false")) {
+                            serverErrorMessage = responseControl.split(",")[1];
+                            throw new Exception(serverErrorMessage);
+                        }
+                        if (responseChat.startsWith("false")) {
+                            serverErrorMessage = responseChat.split(",")[1];
+                            throw new Exception(serverErrorMessage);
                         }
                         String[] res = responseScreen.split(",");
                         if (res.length < 3) {
@@ -385,7 +396,10 @@ public class MainStart extends JFrame {
                         new ReceiveScreen(socketScreen, remoteWidth, remoteHeight, socketControl, socketChat);
                     } catch (Exception ex) {
                         ex.printStackTrace();
-                        JOptionPane.showMessageDialog(MainStart.this, "Không thể kết nối đến đối tác: " + ex.getMessage(), "Lỗi", JOptionPane.ERROR_MESSAGE);
+                        JOptionPane.showMessageDialog(MainStart.this,
+                                "Không thể kết nối đến đối tác: " + serverErrorMessage, // Dùng biến mới
+                                "Lỗi kết nối",
+                                JOptionPane.ERROR_MESSAGE);
                     } finally {
                         btnStart.setEnabled(true);
                         btnStart.setText("Bắt đầu điều khiển");
@@ -405,6 +419,9 @@ public class MainStart extends JFrame {
 
         try {
             UIManager.setLookAndFeel(UIManager.getSystemLookAndFeelClassName());
+            // UIManager.put("Button.disabledText", Color.RED);
+            UIManager.put("Button.disabledText", new Color(173,216,230));
+
         } catch (Exception e) {
             e.printStackTrace();
         }
@@ -412,9 +429,7 @@ public class MainStart extends JFrame {
         SwingUtilities.invokeLater(() -> {
             try {
                 
-                String ipServer = "localhost"; 
-                // String ipServer = "192.168.2.95"; // (Từ 43a...)
-                
+                String ipServer = "localhost";  
                 MainStart main = new MainStart(ipServer);
                 main.setVisible(true);
             } catch (Exception e) {

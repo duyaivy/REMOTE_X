@@ -19,7 +19,6 @@ public class ReceiveScreen extends JFrame {
 
     public ReceiveScreen(Socket dataSocket, float width, float height, Socket controlSocket, Socket chatSocket) {
         
-        // ... (Toàn bộ code UI, JMenuBar, setSize, ... của bạn giữ nguyên) ...
         setTitle("RemoteX Screen Viewer");
 
         Dimension screenSize = Toolkit.getDefaultToolkit().getScreenSize();
@@ -83,7 +82,7 @@ public class ReceiveScreen extends JFrame {
             int screenHeight = in.readInt();
 
             currentImage = new BufferedImage(screenWidth, screenHeight, BufferedImage.TYPE_INT_RGB);
-            statusMessage = null; // Xóa chữ "Đang kết nối..."
+            statusMessage = null; 
 
             while (!socket.isClosed()) {
                 boolean isFullFrame = in.readBoolean();
