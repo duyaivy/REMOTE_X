@@ -226,11 +226,13 @@ public class MainStart extends JFrame {
                             if (enableMonitoring) {
                                 new Thread(() -> {
                                     try {
-                                        // ⚠️ Chỉ truyền control và chat, không có screen socket
-                                        MonitoringManager.getInstance().startMonitoring(
-                                                null, // socketScreen = null vì dùng UDP
-                                                socketChat,
-                                                socketControl);
+                                        // ✅ Kiểm tra null trước khi gọi
+                                        if (socketChat != null && socketControl != null) {
+                                            MonitoringManager.getInstance().startMonitoring(
+                                                    null, // socketScreen = null vì dùng UDP
+                                                    socketChat,
+                                                    socketControl);
+                                        }
                                     } catch (Exception monitorEx) {
                                         JOptionPane.showMessageDialog(MainStart.this,
                                                 "Lỗi khi khởi tạo giám sát AI: " + monitorEx.getMessage(),
@@ -244,16 +246,18 @@ public class MainStart extends JFrame {
 
                             Robot rb = new Robot(gDev);
 
-                            // ✅ TRUYỀN NULL CHO screenSocket VÌ DÙNG UDP
+                            // ✅ THÊM IP_SERVER (relay host)
                             new ReceiveEvent(
                                     socketControl,
-                                    null, // ← socketScreen = null (không dùng TCP)
+                                    null, // socketScreen = null (không dùng TCP)
                                     socketChat,
                                     rb,
                                     screen.height,
                                     screen.width,
                                     btnStartShare,
-                                    username);
+                                    username,
+                                    IP_SERVER // ← THÊM relay host
+                            );
 
                         } catch (Exception ex) {
                             ex.printStackTrace();
@@ -276,6 +280,7 @@ public class MainStart extends JFrame {
                             btnStartShare.setText("Cho phép điều khiển");
                         }
                     }
+
                 };
                 worker.execute();
             }

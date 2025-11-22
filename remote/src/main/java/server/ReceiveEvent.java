@@ -14,26 +14,27 @@ public class ReceiveEvent extends Thread {
     private int h, w;
 
     private Socket controlSocket;
-    private Socket screenSocket; // ⚠️ Không dùng nữa với UDP, nhưng giữ lại
+    private Socket screenSocket; // Không dùng nữa với UDP
     private Socket chatSocket;
     private JButton btnStartShare;
-    private ShareScreenUDP currentShareScreen = null; // ✅ Đổi sang UDP
+    private ShareScreenUDP currentShareScreen = null;
 
     // ✅ THÊM
-    private String relayHost = "localhost";
+    private String relayHost;
     private String username;
 
     public ReceiveEvent(Socket controlSocket, Socket screenSocket, Socket chatSocket,
-            Robot robot, int h, int w, JButton btnStartShare, String username) {
+            Robot robot, int h, int w, JButton btnStartShare, String username, String relayHost) {
 
         this.controlSocket = controlSocket;
-        this.screenSocket = screenSocket;
+        this.screenSocket = screenSocket; // Giữ lại nhưng không dùng
         this.chatSocket = chatSocket;
         this.robot = robot;
         this.h = h;
         this.w = w;
         this.btnStartShare = btnStartShare;
-        this.username = username; // ✅ Lưu username
+        this.username = username;
+        this.relayHost = relayHost; // ✅ LƯU relay host
 
         try {
             this.dis = new DataInputStream(this.controlSocket.getInputStream());
@@ -51,17 +52,17 @@ public class ReceiveEvent extends Thread {
                 String data = dis.readUTF();
 
                 if (data.equals("START_SESSION")) {
-                    System.out.println("ReceiveEvent: Nhận START_SESSION - Khởi động ShareScreenUDP");
+                    System.out.println("[ReceiveEvent] Nhận START_SESSION - Khởi động ShareScreenUDP");
 
                     new Thread(() -> {
                         try {
-                            // ✅ Dùng ShareScreenUDP với username thật
+                            // ✅ Dùng relayHost từ field
                             currentShareScreen = new ShareScreenUDP(
                                     relayHost,
                                     username,
                                     this.chatSocket);
                         } catch (Exception e) {
-                            System.err.println("Error starting ShareScreenUDP: " + e.getMessage());
+                            System.err.println("[ReceiveEvent] Error starting ShareScreenUDP: " + e.getMessage());
                             e.printStackTrace();
                         }
                     }).start();
@@ -70,11 +71,11 @@ public class ReceiveEvent extends Thread {
                 }
 
                 if (data.equals("RESTART_SHARESCREEN")) {
-                    System.out.println("ReceiveEvent: Nhận RESTART_SHARESCREEN");
+                    System.out.println("[ReceiveEvent] Nhận RESTART_SHARESCREEN");
 
                     if (currentShareScreen != null) {
                         currentShareScreen.stop();
-                        System.out.println("ReceiveEvent: Đã dừng ShareScreenUDP cũ");
+                        System.out.println("[ReceiveEvent] Đã dừng ShareScreenUDP cũ");
                         Thread.sleep(500);
                     }
 
@@ -84,9 +85,9 @@ public class ReceiveEvent extends Thread {
                                     relayHost,
                                     username,
                                     this.chatSocket);
-                            System.out.println("ReceiveEvent: Đã khởi động ShareScreenUDP mới");
+                            System.out.println("[ReceiveEvent] Đã khởi động ShareScreenUDP mới");
                         } catch (Exception e) {
-                            System.err.println("Error restarting ShareScreenUDP: " + e.getMessage());
+                            System.err.println("[ReceiveEvent] Error restarting ShareScreenUDP: " + e.getMessage());
                             e.printStackTrace();
                         }
                     }).start();
@@ -94,11 +95,11 @@ public class ReceiveEvent extends Thread {
                     continue;
                 }
 
-                // ===== XỬ LÝ CONTROL EVENTS (GIỮ NGUYÊN) =====
+                // ===== XỬ LÝ CONTROL EVENTS =====
                 try {
                     String[] parts = data.split(",");
                     if (parts.length == 0) {
-                        System.err.println("Invalid control data (empty): " + data);
+                        System.err.println("[ReceiveEvent] Invalid control data (empty): " + data);
                         continue;
                     }
 
@@ -163,22 +164,24 @@ public class ReceiveEvent extends Thread {
                             break;
                         }
                         default:
-                            System.out.println("Unknown command: " + command);
+                            System.out.println("[ReceiveEvent] Unknown command: " + command);
                             break;
                     }
                 } catch (NumberFormatException e) {
-                    System.err.println("Invalid control data format (not a number): " + data);
+                    System.err.println("[ReceiveEvent] Invalid control data format (not a number): " + data);
                 } catch (ArrayIndexOutOfBoundsException e) {
-                    System.err.println("Invalid control data format (missing parts): " + data);
+                    System.err.println("[ReceiveEvent] Invalid control data format (missing parts): " + data);
                 } catch (Exception e) {
-                    System.err.println("Error processing control event: " + e.getMessage());
+                    System.err.println("[ReceiveEvent] Error processing control event: " + e.getMessage());
                     e.printStackTrace();
                 }
             }
 
         } catch (IOException e) {
+            System.err.println("[ReceiveEvent] IOException: " + e.getMessage());
             e.printStackTrace();
         } catch (Exception e) {
+            System.err.println("[ReceiveEvent] Exception: " + e.getMessage());
             e.printStackTrace();
         } finally {
             // Cleanup
