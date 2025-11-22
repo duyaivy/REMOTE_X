@@ -15,11 +15,12 @@ public class AnomalyDetector {
     private OrtSession session;
     private boolean isLoaded = false;
 
-    private static final float ANOMALY_THRESHOLD_CRITICAL = -0.5f;
+    private static final float THRESHOLD_CRITICAL = -0.035f;
+    private static final float THRESHOLD_HIGH = -0.025f;
+    private static final float THRESHOLD_MEDIUM = -0.015f;
+    private static final float THRESHOLD_LOW = -0.005f;
 
     public void initialize() throws Exception {
-
-        // Create ONNX environment
         env = OrtEnvironment.getEnvironment();
         Path tempModel = Files.createTempFile("isolation_forest_model", ".onnx");
         try (InputStream is = getClass().getResourceAsStream("/isolation_forest_model.onnx")) {
@@ -29,7 +30,6 @@ public class AnomalyDetector {
             Files.copy(is, tempModel, StandardCopyOption.REPLACE_EXISTING);
         }
 
-        // Create session
         OrtSession.SessionOptions options = new OrtSession.SessionOptions();
         session = env.createSession(tempModel.toString(), options);
         tempModel.toFile().deleteOnExit();
@@ -51,11 +51,9 @@ public class AnomalyDetector {
         long[][] labels = (long[][]) result.get(0).getValue();
         float[][] scores = (float[][]) result.get(1).getValue();
 
-        // Cleanup
         inputTensor.close();
         result.close();
 
-        // Parse results
         boolean isAnomaly = labels[0][0] == -1;
         float score = scores[0][0];
 
@@ -98,16 +96,16 @@ public class AnomalyDetector {
                 return "NORMAL";
             }
 
-            if (score < ANOMALY_THRESHOLD_CRITICAL) {
-
+            if (score < THRESHOLD_CRITICAL) {
                 return "CRITICAL";
-
-            } else if (score < -0.2) {
+            } else if (score < THRESHOLD_HIGH) {
                 return "HIGH";
-            } else if (score < -0.1) {
+            } else if (score < THRESHOLD_MEDIUM) {
                 return "MEDIUM";
-            } else {
+            } else if (score < THRESHOLD_LOW) {
                 return "LOW";
+            } else {
+                return "SUSPICIOUS";
             }
         }
 
@@ -125,22 +123,25 @@ public class AnomalyDetector {
                 return 0;
             }
 
-            if (score < -0.5)
-
-                return 10; // CRITICAL
-
-            if (score < -0.4)
+            if (score < -0.042)
+                return 10;
+            if (score < -0.038)
                 return 9;
-            if (score < -0.3)
-                return 8; // HIGH
-            if (score < -0.2)
+            if (score < -0.035)
+                return 8;
+            if (score < -0.030)
                 return 7;
-            if (score < -0.1)
-                return 6; // MEDIUM
-            if (score < -0.05)
-
+            if (score < -0.025)
+                return 6;
+            if (score < -0.020)
                 return 5;
-            return 4; // LOW
+            if (score < -0.015)
+                return 4;
+            if (score < -0.010)
+                return 3;
+            if (score < -0.005)
+                return 2;
+            return 1;
         }
 
         @Override

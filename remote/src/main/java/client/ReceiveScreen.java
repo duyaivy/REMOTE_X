@@ -1,10 +1,8 @@
 package client;
 
-// --- CÁC IMPORT THÊM VÀO ---
-import common.ChatWindow; // <-- Đảm bảo import đúng package
+import common.ChatWindow;
 import javax.swing.*;
 import java.awt.*;
-//... (các import khác của bạn) ...
 import javax.imageio.ImageIO;
 import java.awt.image.BufferedImage;
 import java.io.ByteArrayInputStream;
@@ -16,19 +14,29 @@ public class ReceiveScreen extends JFrame {
 
     private volatile BufferedImage currentImage = null;
     private volatile String statusMessage = "Đang kết nối tới server...";
-
     private final JPanel screenPanel;
     private ChatWindow chatWindow;
 
     public ReceiveScreen(Socket dataSocket, float width, float height, Socket controlSocket, Socket chatSocket) {
+
+        setTitle("RemoteX Screen Viewer");
+
         setTitle("RemoteX Screen Viewer");
 
         Dimension screenSize = Toolkit.getDefaultToolkit().getScreenSize();
+        GraphicsEnvironment ge = GraphicsEnvironment.getLocalGraphicsEnvironment();
+        GraphicsDevice gd = ge.getDefaultScreenDevice();
+        GraphicsConfiguration gc = gd.getDefaultConfiguration();
+        Insets screenInsets = Toolkit.getDefaultToolkit().getScreenInsets(gc);
+
+        int availableWidth = screenSize.width - screenInsets.left - screenInsets.right;
+        int availableHeight = screenSize.height - screenInsets.top - screenInsets.bottom;
+
         double remoteWidth = width;
         double remoteHeight = height;
 
-        double widthRatio = screenSize.width / remoteWidth;
-        double heightRatio = screenSize.height / remoteHeight;
+        double widthRatio = availableWidth / remoteWidth;
+        double heightRatio = availableHeight / remoteHeight;
         double scaleFactor = Math.min(widthRatio, heightRatio);
 
         width = (int) (remoteWidth * scaleFactor);
@@ -37,7 +45,6 @@ public class ReceiveScreen extends JFrame {
         setSize((int) width, (int) height);
         setLocationRelativeTo(null);
         setDefaultCloseOperation(JFrame.DISPOSE_ON_CLOSE);
-
         screenPanel = new JPanel() {
             @Override
             protected void paintComponent(Graphics g) {
@@ -54,7 +61,6 @@ public class ReceiveScreen extends JFrame {
                 }
             }
         };
-
         add(screenPanel);
         this.chatWindow = new ChatWindow(chatSocket, "Server");
 
@@ -67,37 +73,32 @@ public class ReceiveScreen extends JFrame {
                 this.chatWindow.showWindow();
             }
         });
-
         toolsMenu.add(chatMenuItem);
         menuBar.add(toolsMenu);
         this.setJMenuBar(menuBar);
         setVisible(true);
         new Thread(() -> receiveFrames(dataSocket)).start();
+
         new ControlEvent(controlSocket, screenPanel);
     }
 
     private void receiveFrames(Socket socket) {
         try (DataInputStream in = new DataInputStream(socket.getInputStream())) {
 
-            // Đọc kích thước màn hình gốc (gửi 1 lần duy nhất)
             int screenWidth = in.readInt();
             int screenHeight = in.readInt();
 
-            // Tạo ảnh nền ban đầu
             currentImage = new BufferedImage(screenWidth, screenHeight, BufferedImage.TYPE_INT_RGB);
-            statusMessage = null; // Xóa thông báo "đang kết nối"
+            statusMessage = null;
 
             while (!socket.isClosed()) {
                 boolean isFullFrame = in.readBoolean();
-                in.readInt(); // Đọc sequence number (tạm thời không dùng)
-
+                in.readInt();
                 if (isFullFrame) {
                     processFullFrame(in);
                 } else {
                     processDeltaFrame(in);
                 }
-
-                // Yêu cầu vẽ lại màn hình SAU KHI đã có ảnh mới
                 screenPanel.repaint();
             }
 
@@ -121,7 +122,7 @@ public class ReceiveScreen extends JFrame {
         } catch (Exception e) {
             e.printStackTrace();
             statusMessage = "Mất kết nối tới server: " + e.getMessage();
-            currentImage = null; // Xóa ảnh cũ
+            currentImage = null;
             screenPanel.repaint();
         }
     }
@@ -130,10 +131,8 @@ public class ReceiveScreen extends JFrame {
         int dataLength = in.readInt();
         byte[] frameData = new byte[dataLength];
         in.readFully(frameData);
-
         BufferedImage img = ImageIO.read(new ByteArrayInputStream(frameData));
         if (img != null) {
-            // Thay thế hoàn toàn ảnh hiện tại
             currentImage = img;
         }
     }
@@ -147,10 +146,8 @@ public class ReceiveScreen extends JFrame {
         int dataLength = in.readInt();
         byte[] frameData = new byte[dataLength];
         in.readFully(frameData);
-
         BufferedImage deltaImg = ImageIO.read(new ByteArrayInputStream(frameData));
 
-        // Vẽ ảnh delta lên ảnh hiện tại
         if (currentImage != null && deltaImg != null) {
             Graphics2D g2d = currentImage.createGraphics();
             g2d.drawImage(deltaImg, x, y, null);

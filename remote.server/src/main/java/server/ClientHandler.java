@@ -18,16 +18,16 @@ public class ClientHandler extends Thread {
 
     @Override
     public void run() {
-        // KHÔNG DÙNG try-with-resources ở đây nữa
+
         try {
             DataInputStream dis = new DataInputStream(clientSocket.getInputStream());
             DataOutputStream dos = new DataOutputStream(clientSocket.getOutputStream());
 
             String[] data = dis.readUTF().split(",");
-            if (data.length < 6) { // Cần 6 phần tử: user, pass, type, connectType, width, height
+            if (data.length < 6) {
                 System.err.println("Invalid message format received from " + clientSocket.getRemoteSocketAddress());
                 dos.writeUTF("false,Invalid message format");
-                clientSocket.close(); // Đóng socket nếu handshake lỗi
+                clientSocket.close();
                 return;
             }
             String username = data[0].trim();
@@ -36,20 +36,18 @@ public class ClientHandler extends Thread {
             String w = data[3].trim();
             String h = data[4].trim();
             String connectType = data[5].trim();
-            System.out.println("New connection: " + username + ", type: " + type + ", connectType: " + connectType
-                    + ", from " + clientSocket.getRemoteSocketAddress() + " " + w + "x" + h);
+
             if ("sharer".equals(type)) {
                 handleSharer(username, password, connectType, w, h, dos);
             } else if ("viewer".equals(type)) {
                 handleViewer(username, password, connectType, w, h, dos);
             } else {
                 dos.writeUTF("false,Invalid client type");
-                clientSocket.close(); // Đóng socket nếu handshake lỗi
+                clientSocket.close();
             }
 
         } catch (Exception e) {
-            System.err.println("Handler error for " + clientSocket.getRemoteSocketAddress() + ": " + e.getMessage());
-            // Đảm bảo đóng socket nếu có lỗi xảy ra trong quá trình handshake
+
             try {
                 if (clientSocket != null && !clientSocket.isClosed()) {
                     clientSocket.close();
@@ -63,17 +61,36 @@ public class ClientHandler extends Thread {
     private void handleSharer(String username, String password, String connectType, String w, String h,
             DataOutputStream dos)
             throws IOException {
+
+        // Nó gửi "true,..." cho cả 3 kết nối, điều này là OK
+        // vì MainStart (Sharer) đọc cả 3.
         synchronized (activeSessions) {
             Session session = activeSessions.get(username);
             if (session == null) {
+
                 if (activeSessions.size() >= MAX_CLIENTS) {
                     dos.writeUTF("false,Server is full");
-                    clientSocket.close(); // Đóng socket vì không thể tạo session
+                    clientSocket.close();
                     return;
                 }
                 session = new Session(username, password, w, h, activeSessions);
                 activeSessions.put(username, session);
             }
+
+            if (session.isActive()) {
+                System.out.println("[ClientHandler] REJECT: Session is ACTIVE, not allowing duplicate sharer");
+                dos.writeUTF("false,Session is already active");
+                clientSocket.close();
+                return;
+            }
+            if (!session.checkPassword(password)) {
+                System.out.println("[ClientHandler] REJECT: Password mismatch for session: " + username);
+                dos.writeUTF("false,Username already exists with different password");
+                clientSocket.close();
+                return;
+            }
+            System.out.println("[ClientHandler] ACCEPT: Session is WAITING, allowing reconnection");
+
             session.setSharerSocket(clientSocket, connectType);
 
             if (session.isSharerReady()) {
@@ -81,7 +98,7 @@ public class ClientHandler extends Thread {
                 dos.writeUTF("true,Sharer is ready");
             } else {
                 System.out.println("Sharer '" + username + "' connected one channel. Waiting for the other.");
-                dos.writeUTF("true,Channel connected, waiting for the other.");
+                dos.writeUTF("true,Channel connected");
             }
         }
     }
@@ -93,26 +110,45 @@ public class ClientHandler extends Thread {
         synchronized (activeSessions) {
             session = activeSessions.get(username);
         }
-
         if (session == null) {
             dos.writeUTF("false,Session not found");
-            clientSocket.close(); // Đóng socket
+            clientSocket.close();
             return;
         }
         if (!session.isSharerReady()) {
             dos.writeUTF("false,Session is not ready yet");
-            clientSocket.close(); // Đóng socket
+            clientSocket.close();
             return;
         }
         if (!session.checkPassword(password)) {
             dos.writeUTF("false,Invalid password");
-            clientSocket.close(); // Đóng socket
+            clientSocket.close();
             return;
         }
 
-        // Giao socket cho session và bắt đầu relay dữ liệu
-        // Hàm này giờ đây sẽ chịu trách nhiệm khởi động các thread relay
+        // Giao socket cho session VÀ để Session tự gửi tín hiệu "START_SESSION"
+        System.out.println(
+                "[ClientHandler] Viewer connecting to session: " + username + ", status: " + session.getStatus());
+
         session.setViewerSocketAndAttemptRelay(clientSocket, connectType);
-        dos.writeUTF("true," + session.getWidth() + "," + session.getHeight());
+
+        switch (connectType) {
+            case "screen":
+
+                dos.writeUTF("true," + session.getWidth() + "," + session.getHeight());
+                break;
+            case "control":
+
+                dos.writeUTF("true,control_ok");
+                break;
+            case "chat":
+
+                dos.writeUTF("true,chat_ok");
+                break;
+            default:
+                dos.writeUTF("false,Unknown connectType");
+                break;
+        }
+
     }
 }

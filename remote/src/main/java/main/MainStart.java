@@ -1,18 +1,15 @@
 package main;
 
 import javax.swing.*;
-import javax.swing.border.*;
-
 import client.ReceiveScreen;
+import io.github.cdimascio.dotenv.Dotenv;
 import monitor.MonitoringManager;
-
 import java.awt.*;
 import java.io.DataInputStream;
 import java.io.DataOutputStream;
 import java.net.Socket;
 
 import server.ReceiveEvent;
-import server.ShareScreen;
 
 public class MainStart extends JFrame {
 
@@ -20,84 +17,161 @@ public class MainStart extends JFrame {
 
     public MainStart(String ipServer) {
         setTitle("Remote X");
-        setSize(800, 500);
+        setSize(900, 520);
         setDefaultCloseOperation(EXIT_ON_CLOSE);
         setLocationRelativeTo(null);
-        setLayout(new GridLayout(1, 2));
 
-        JPanel leftPanel = new JPanel(new GridBagLayout());
-        leftPanel.setBorder(new TitledBorder(new EtchedBorder(), "Cho phép điều khiển"));
-        GridBagConstraints gbc = new GridBagConstraints();
-        gbc.insets = new Insets(5, 5, 5, 5);
-        gbc.anchor = GridBagConstraints.WEST;
-        gbc.fill = GridBagConstraints.HORIZONTAL;
+        getContentPane().setBackground(UIHelper.COLOR_BACKGROUND);
+        setLayout(new BorderLayout(0, 0));
+
+        setJMenuBar(UIHelper.createStyledMenuBar());
+
+        JPanel mainPanel = new JPanel(new GridLayout(1, 2, 15, 0));
+        mainPanel.setBackground(UIHelper.COLOR_BACKGROUND);
+        mainPanel.setBorder(BorderFactory.createEmptyBorder(15, 15, 15, 15));
+
         Dimension screen = Toolkit.getDefaultToolkit().getScreenSize();
-        JLabel lblIDBan = new JLabel("ID của bạn");
-        JTextField txtIDBan = new JTextField("", 15);
-        JLabel lblMatKhau = new JLabel("Mật khẩu");
-        JTextField txtMatKhau = new JTextField("", 15);
 
-        // ✅ CHECKBOX GIÁM SÁT - Mặc định BẬT
+        JPanel leftPanel = UIHelper.createStyledPanel();
+
+        JPanel leftHeader = UIHelper.createHeaderPanel("Cho phép điều khiển", UIHelper.createAntennaIcon());
+        leftPanel.add(leftHeader, BorderLayout.NORTH);
+
+        JPanel leftContent = new JPanel(new GridBagLayout());
+        leftContent.setBackground(Color.WHITE);
+        leftContent.setBorder(BorderFactory.createEmptyBorder(15, 20, 20, 20));
+        GridBagConstraints gbcLeft = new GridBagConstraints();
+        gbcLeft.insets = new Insets(5, 5, 5, 5);
+        gbcLeft.fill = GridBagConstraints.HORIZONTAL;
+        gbcLeft.anchor = GridBagConstraints.WEST;
+
+        JLabel lblDescLeft = new JLabel("<html>Gửi ID và Mật khẩu này cho đối tác của bạn.</html>");
+        lblDescLeft.setFont(UIHelper.FONT_LABEL);
+        lblDescLeft.setForeground(UIHelper.COLOR_TEXT_DARK);
+        gbcLeft.gridx = 0;
+        gbcLeft.gridy = 0;
+        gbcLeft.gridwidth = 2;
+        gbcLeft.insets = new Insets(0, 5, 20, 5);
+        leftContent.add(lblDescLeft, gbcLeft);
+
+        gbcLeft.gridwidth = 1;
+        gbcLeft.insets = new Insets(5, 5, 5, 5);
+
+        JLabel lblIDBan = new JLabel("ID của bạn");
+        lblIDBan.setFont(UIHelper.FONT_LABEL);
+        lblIDBan.setForeground(UIHelper.COLOR_TEXT_DARK);
+        gbcLeft.gridx = 0;
+        gbcLeft.gridy = 1;
+        gbcLeft.fill = GridBagConstraints.NONE;
+        gbcLeft.weightx = 0.0;
+        leftContent.add(lblIDBan, gbcLeft);
+
+        JTextField txtIDBan = new JTextField("", 15);
+        txtIDBan.setFont(UIHelper.FONT_FIELD);
+        UIHelper.styleTextField(txtIDBan);
+        gbcLeft.gridx = 1;
+        gbcLeft.gridy = 1;
+        gbcLeft.fill = GridBagConstraints.HORIZONTAL;
+        gbcLeft.weightx = 1.0;
+        leftContent.add(txtIDBan, gbcLeft);
+
+        JLabel lblMatKhau = new JLabel("Mật khẩu");
+        lblMatKhau.setFont(UIHelper.FONT_LABEL);
+        lblMatKhau.setForeground(UIHelper.COLOR_TEXT_DARK);
+        gbcLeft.gridx = 0;
+        gbcLeft.gridy = 2;
+        gbcLeft.fill = GridBagConstraints.NONE;
+        gbcLeft.weightx = 0.0;
+        leftContent.add(lblMatKhau, gbcLeft);
+
+        JPasswordField txtMatKhau = new JPasswordField("", 15);
+        txtMatKhau.setFont(UIHelper.FONT_FIELD);
+        UIHelper.styleTextField(txtMatKhau);
+        gbcLeft.gridx = 1;
+        gbcLeft.gridy = 2;
+        gbcLeft.fill = GridBagConstraints.HORIZONTAL;
+        gbcLeft.weightx = 1.0;
+        leftContent.add(txtMatKhau, gbcLeft);
+
         JCheckBox chkMonitoring = new JCheckBox("Bật giám sát bảo mật (AI)", true);
         chkMonitoring.setToolTipText("Giám sát các hoạt động nguy hiểm trên máy bằng AI");
+        chkMonitoring.setFont(UIHelper.FONT_LABEL);
+        chkMonitoring.setBackground(Color.WHITE);
+        chkMonitoring.setForeground(UIHelper.COLOR_TEXT_DARK);
+        gbcLeft.gridx = 0;
+        gbcLeft.gridy = 3;
+        gbcLeft.gridwidth = 2;
+        gbcLeft.anchor = GridBagConstraints.WEST;
+        gbcLeft.fill = GridBagConstraints.NONE;
+        gbcLeft.weightx = 0.0;
+        gbcLeft.insets = new Insets(15, 5, 15, 5);
+        leftContent.add(chkMonitoring, gbcLeft);
 
-        JButton btnStartShare = new JButton("Cho phép điều khiển");
+        JPanel spacerLeft = new JPanel();
+        spacerLeft.setOpaque(false);
+        gbcLeft.gridy = 4;
+        gbcLeft.weighty = 1.0;
+        leftContent.add(spacerLeft, gbcLeft);
+
+        JButton btnStartShare = UIHelper.createStyledButton("Cho phép điều khiển");
+        gbcLeft.gridx = 0;
+        gbcLeft.gridy = 5;
+        gbcLeft.gridwidth = 2;
+        gbcLeft.fill = GridBagConstraints.NONE;
+        gbcLeft.anchor = GridBagConstraints.CENTER;
+        gbcLeft.weighty = 0.0;
+        gbcLeft.insets = new Insets(0, 5, 10, 5);
+        leftContent.add(btnStartShare, gbcLeft);
+
+        leftPanel.add(leftContent, BorderLayout.CENTER);
+
         btnStartShare.addActionListener(e -> {
             String username = txtIDBan.getText().trim();
-            String password = txtMatKhau.getText().trim();
-            boolean enableMonitoring = chkMonitoring.isSelected(); // LẤY TRẠNG THÁI CHECKBOX
+
+            String password = new String(txtMatKhau.getPassword()).trim();
+
+            boolean enableMonitoring = chkMonitoring.isSelected();
 
             if (username.isEmpty() || password.isEmpty()) {
                 JOptionPane.showMessageDialog(this, "Vui lòng nhập ID và mật khẩu.", "Lỗi", JOptionPane.ERROR_MESSAGE);
             } else {
-                // khoi dong
                 btnStartShare.setEnabled(false);
                 btnStartShare.setText("Đang kết nối...");
                 SwingWorker<Void, Void> worker = new SwingWorker<Void, Void>() {
-                    private Socket socketScreen;
-                    private Socket socketControl;
-                    private Socket socketChat;
+
+                    private Socket socketScreen, socketControl, socketChat;
                     private GraphicsEnvironment gEnv = GraphicsEnvironment.getLocalGraphicsEnvironment();
                     private GraphicsDevice gDev = gEnv.getDefaultScreenDevice();
 
                     @Override
                     protected Void doInBackground() throws Exception {
+
                         try {
-                            // Kết nối tất cả sockets
                             socketScreen = new Socket(ipServer, 5000);
                             socketControl = new Socket(ipServer, 6000);
                             socketChat = new Socket(ipServer, CHAT_PORT);
-
                             String initMessage = username + "," + password + ",sharer," + screen.getWidth() + ","
                                     + screen.getHeight();
-
                             DataOutputStream dosScreen = new DataOutputStream(socketScreen.getOutputStream());
                             DataOutputStream dosControl = new DataOutputStream(socketControl.getOutputStream());
                             DataOutputStream dosChat = new DataOutputStream(socketChat.getOutputStream());
-
                             dosScreen.writeUTF(initMessage + ",screen");
                             dosControl.writeUTF(initMessage + ",control");
                             dosChat.writeUTF(initMessage + ",chat");
-
                             dosScreen.flush();
                             dosControl.flush();
                             dosChat.flush();
-
                             DataInputStream disScreen = new DataInputStream(socketScreen.getInputStream());
                             DataInputStream disControl = new DataInputStream(socketControl.getInputStream());
                             DataInputStream disChat = new DataInputStream(socketChat.getInputStream());
-
                             String responseScreen = disScreen.readUTF();
                             String responseControl = disControl.readUTF();
                             String responseChat = disChat.readUTF();
-
-                            // Kiểm tra response từ server
                             if (responseScreen.startsWith("false") || responseControl.startsWith("false")
                                     || responseChat.startsWith("false")) {
                                 throw new Exception("Server response: " + responseScreen + " | " + responseControl
                                         + " | " + responseChat);
                             }
-
                         } catch (Exception e) {
                             try {
                                 if (socketScreen != null)
@@ -121,10 +195,12 @@ public class MainStart extends JFrame {
 
                     @Override
                     protected void done() {
+
                         try {
                             get();
-                            JOptionPane.showMessageDialog(MainStart.this,
-                                    "Kết nối thành công! Bắt đầu chia sẻ màn hình.");
+                            JOptionPane.showMessageDialog(MainStart.this, "Kết nối thành công! Đang chờ đối tác...");
+                            btnStartShare.setText("Đang chia sẻ...");
+
                             if (enableMonitoring) {
                                 new Thread(() -> {
                                     try {
@@ -140,31 +216,16 @@ public class MainStart extends JFrame {
                             } else {
                                 System.out.println("[MAIN] Monitoring disabled by user");
                             }
-                            System.out.println("Starting ShareScreen...");
-                            new Thread(() -> {
-                                try {
-                                    new ShareScreen(socketScreen, socketChat);
-                                } catch (Exception ex) {
-                                    SwingUtilities.invokeLater(() -> {
-                                        JOptionPane.showMessageDialog(MainStart.this,
-                                                "Lỗi khi khởi tạo ShareScreen: " + ex.getMessage(),
-                                                "Lỗi", JOptionPane.ERROR_MESSAGE);
-                                    });
-                                    ex.printStackTrace();
-                                }
-                            }, "ShareScreenThread").start();
 
-                            System.out.println("[MAIN] Starting ReceiveEvent...");
                             Robot rb = new Robot(gDev);
-                            new ReceiveEvent(socketControl, rb, screen.height, screen.width);
-
+                            new ReceiveEvent(socketControl, socketScreen, socketChat, rb, screen.height, screen.width,
+                                    btnStartShare);
                         } catch (Exception ex) {
                             ex.printStackTrace();
                             JOptionPane.showMessageDialog(MainStart.this,
                                     "Không thể kết nối đến server: " + ex.getMessage(), "Lỗi",
                                     JOptionPane.ERROR_MESSAGE);
 
-                            // Đóng socket nếu chúng đã được mở
                             try {
                                 if (socketScreen != null)
                                     socketScreen.close();
@@ -180,8 +241,6 @@ public class MainStart extends JFrame {
                                     socketChat.close();
                             } catch (Exception e) {
                             }
-
-                        } finally {
                             btnStartShare.setEnabled(true);
                             btnStartShare.setText("Cho phép điều khiển");
                         }
@@ -191,37 +250,89 @@ public class MainStart extends JFrame {
             }
         });
 
-        gbc.gridx = 0;
-        gbc.gridy = 0;
-        leftPanel.add(lblIDBan, gbc);
-        gbc.gridy = 1;
-        leftPanel.add(txtIDBan, gbc);
-        gbc.gridy = 2;
-        leftPanel.add(lblMatKhau, gbc);
-        gbc.gridy = 3;
-        leftPanel.add(txtMatKhau, gbc);
-        gbc.gridy = 4;
-        // ✅ THÊM CHECKBOX VÀO LAYOUT
-        leftPanel.add(chkMonitoring, gbc);
-        gbc.gridy = 5;
-        leftPanel.add(btnStartShare, gbc);
+        JPanel rightPanel = UIHelper.createStyledPanel();
 
-        JPanel rightPanel = new JPanel(new GridBagLayout());
-        rightPanel.setBorder(new TitledBorder(new EtchedBorder(), "Điều khiển máy tính khác"));
-        GridBagConstraints gbc2 = new GridBagConstraints();
-        gbc2.insets = new Insets(5, 5, 5, 5);
-        gbc2.anchor = GridBagConstraints.WEST;
-        gbc2.fill = GridBagConstraints.HORIZONTAL;
+        JPanel rightHeader = UIHelper.createHeaderPanel("Điều khiển máy tính khác", UIHelper.createComputerIcon());
+        rightPanel.add(rightHeader, BorderLayout.NORTH);
+        JPanel rightContent = new JPanel(new GridBagLayout());
+        rightContent.setBackground(Color.WHITE);
+        rightContent.setBorder(BorderFactory.createEmptyBorder(15, 20, 20, 20));
+        GridBagConstraints gbcRight = new GridBagConstraints();
+        gbcRight.insets = new Insets(5, 5, 5, 5);
+        gbcRight.fill = GridBagConstraints.HORIZONTAL;
+        gbcRight.anchor = GridBagConstraints.WEST;
+
+        JLabel lblDescRight = new JLabel("<html>Nhập ID và Mật khẩu của máy bạn cần điều khiển.</html>");
+        lblDescRight.setFont(UIHelper.FONT_LABEL);
+        lblDescRight.setForeground(UIHelper.COLOR_TEXT_DARK);
+        gbcRight.gridy = 0;
+        gbcRight.gridx = 0;
+        gbcRight.gridwidth = 2;
+        gbcRight.insets = new Insets(0, 5, 20, 5);
+        rightContent.add(lblDescRight, gbcRight);
+
+        // --- Reset GBC ---
+        gbcRight.gridwidth = 1;
+        gbcRight.insets = new Insets(5, 5, 5, 5);
 
         JLabel lblIDDT = new JLabel("ID đối tác");
-        JTextField txtIDDT = new JTextField(15);
-        JLabel lblMKDT = new JLabel("Mật khẩu");
-        JTextField txtMKDT = new JTextField(15);
-        JButton btnStart = new JButton("Bắt đầu điều khiển");
+        lblIDDT.setFont(UIHelper.FONT_LABEL);
+        lblIDDT.setForeground(UIHelper.COLOR_TEXT_DARK);
+        gbcRight.gridx = 0;
+        gbcRight.gridy = 1;
+        gbcRight.fill = GridBagConstraints.NONE;
+        gbcRight.weightx = 0.0;
+        rightContent.add(lblIDDT, gbcRight);
 
+        JTextField txtIDDT = new JTextField(15);
+        txtIDDT.setFont(UIHelper.FONT_FIELD);
+        UIHelper.styleTextField(txtIDDT);
+        gbcRight.gridx = 1;
+        gbcRight.gridy = 1;
+        gbcRight.weightx = 1.0;
+        gbcRight.fill = GridBagConstraints.HORIZONTAL;
+        rightContent.add(txtIDDT, gbcRight);
+
+        JLabel lblMKDT = new JLabel("Mật khẩu");
+        lblMKDT.setFont(UIHelper.FONT_LABEL);
+        lblMKDT.setForeground(UIHelper.COLOR_TEXT_DARK);
+        gbcRight.gridx = 0;
+        gbcRight.gridy = 2;
+        gbcRight.weightx = 0.0;
+        gbcRight.fill = GridBagConstraints.NONE;
+        rightContent.add(lblMKDT, gbcRight);
+
+        JPasswordField txtMKDT = new JPasswordField(15);
+        txtMKDT.setFont(UIHelper.FONT_FIELD);
+        UIHelper.styleTextField(txtMKDT);
+        gbcRight.gridx = 1;
+        gbcRight.gridy = 2;
+        gbcRight.weightx = 1.0;
+        gbcRight.fill = GridBagConstraints.HORIZONTAL;
+        rightContent.add(txtMKDT, gbcRight);
+
+        JPanel spacerPanel = new JPanel();
+        spacerPanel.setOpaque(false);
+        gbcRight.gridx = 0;
+        gbcRight.gridy = 3;
+        gbcRight.gridwidth = 2;
+        gbcRight.weighty = 1.0;
+        rightContent.add(spacerPanel, gbcRight);
+
+        JButton btnStart = UIHelper.createStyledButton("Bắt đầu điều khiển");
+        gbcRight.gridx = 0;
+        gbcRight.gridy = 4;
+        gbcRight.gridwidth = 2;
+        gbcRight.fill = GridBagConstraints.NONE;
+        gbcRight.anchor = GridBagConstraints.CENTER;
+        gbcRight.weighty = 0.0;
+        gbcRight.insets = new Insets(0, 5, 10, 5);
+        rightContent.add(btnStart, gbcRight);
+
+        rightPanel.add(rightContent, BorderLayout.CENTER);
         btnStart.addActionListener(e -> {
             String partnerID = txtIDDT.getText().trim();
-            String partnerPassword = txtMKDT.getText().trim();
+            String partnerPassword = new String(txtMKDT.getPassword()).trim();
 
             if (partnerID.isEmpty() || partnerPassword.isEmpty()) {
                 JOptionPane.showMessageDialog(this, "Vui lòng nhập ID và mật khẩu đối tác.", "Lỗi",
@@ -233,55 +344,61 @@ public class MainStart extends JFrame {
             btnStart.setText("Đang kết nối...");
 
             SwingWorker<Void, Void> controlWorker = new SwingWorker<Void, Void>() {
-                private Socket socketScreen;
-                private Socket socketControl;
-                private Socket socketChat;
-                private float remoteWidth;
-                private float remoteHeight;
+
+                private Socket socketScreen, socketControl, socketChat;
+                private DataInputStream disControl; // Giữ luồng đọc
+                private float remoteWidth, remoteHeight;
+
+                private GraphicsEnvironment gEnv = GraphicsEnvironment.getLocalGraphicsEnvironment();
+                private GraphicsDevice gDev = gEnv.getDefaultScreenDevice();
+
+                private String serverErrorMessage = null;
 
                 @Override
                 protected Void doInBackground() throws Exception {
+
                     try {
                         socketScreen = new Socket(ipServer, 5000);
                         socketControl = new Socket(ipServer, 6000);
                         socketChat = new Socket(ipServer, CHAT_PORT);
-
                         String initMessage = partnerID + "," + partnerPassword + ",viewer," + screen.getWidth() + ","
                                 + screen.getHeight();
-
                         DataOutputStream dosScreen = new DataOutputStream(socketScreen.getOutputStream());
                         DataOutputStream dosControl = new DataOutputStream(socketControl.getOutputStream());
                         DataOutputStream dosChat = new DataOutputStream(socketChat.getOutputStream());
-
                         dosScreen.writeUTF(initMessage + ",screen");
                         dosControl.writeUTF(initMessage + ",control");
                         dosChat.writeUTF(initMessage + ",chat");
-
                         dosScreen.flush();
                         dosControl.flush();
                         dosChat.flush();
 
                         DataInputStream disScreen = new DataInputStream(socketScreen.getInputStream());
-                        DataInputStream disControl = new DataInputStream(socketControl.getInputStream());
+                        this.disControl = new DataInputStream(socketControl.getInputStream());
                         DataInputStream disChat = new DataInputStream(socketChat.getInputStream());
 
                         String responseScreen = disScreen.readUTF();
-                        String responseControl = disControl.readUTF();
+                        String responseControl = this.disControl.readUTF();
                         String responseChat = disChat.readUTF();
 
-                        if (responseScreen.startsWith("false") || responseControl.startsWith("false")
-                                || responseChat.startsWith("false")) {
-                            throw new Exception("Server response: " + responseScreen + " | " + responseControl + " | "
-                                    + responseChat);
+                        if (responseScreen.startsWith("false")) {
+                            serverErrorMessage = responseScreen.split(",")[1]; // Lấy "Session not found"
+                            throw new Exception(serverErrorMessage);
                         }
-
+                        if (responseControl.startsWith("false")) {
+                            serverErrorMessage = responseControl.split(",")[1];
+                            throw new Exception(serverErrorMessage);
+                        }
+                        if (responseChat.startsWith("false")) {
+                            serverErrorMessage = responseChat.split(",")[1];
+                            throw new Exception(serverErrorMessage);
+                        }
                         String[] res = responseScreen.split(",");
                         if (res.length < 3) {
                             throw new Exception("Lỗi dữ liệu trả về: " + responseScreen);
                         }
                         remoteWidth = Float.parseFloat(res[1]);
                         remoteHeight = Float.parseFloat(res[2]);
-
                     } catch (Exception ex) {
                         try {
                             if (socketScreen != null)
@@ -305,18 +422,18 @@ public class MainStart extends JFrame {
 
                 @Override
                 protected void done() {
+
                     try {
                         get();
                         JOptionPane.showMessageDialog(MainStart.this, "Kết nối thành công! Bắt đầu điều khiển.");
-                        // ✅ CLIENT: Không cần xử lý monitoring
                         new ReceiveScreen(socketScreen, remoteWidth, remoteHeight, socketControl, socketChat);
                     } catch (Exception ex) {
                         ex.printStackTrace();
                         JOptionPane.showMessageDialog(MainStart.this,
-                                "Không thể kết nối đến đối tác: " + ex.getMessage(), "Lỗi",
+                                "Không thể kết nối đến đối tác: " + serverErrorMessage, // Dùng biến mới
+                                "Lỗi kết nối",
                                 JOptionPane.ERROR_MESSAGE);
                     } finally {
-                        // Bật lại nút bấm
                         btnStart.setEnabled(true);
                         btnStart.setText("Bắt đầu điều khiển");
                     }
@@ -325,27 +442,30 @@ public class MainStart extends JFrame {
             controlWorker.execute();
         });
 
-        gbc2.gridx = 0;
-        gbc2.gridy = 0;
-        rightPanel.add(lblIDDT, gbc2);
-        gbc2.gridy = 1;
-        rightPanel.add(txtIDDT, gbc2);
-        gbc2.gridy = 2;
-        rightPanel.add(lblMKDT, gbc2);
-        gbc2.gridy = 3;
-        rightPanel.add(txtMKDT, gbc2);
-        gbc2.gridy = 4;
-        rightPanel.add(btnStart, gbc2);
+        mainPanel.add(leftPanel);
+        mainPanel.add(rightPanel);
+        add(mainPanel, BorderLayout.CENTER);
 
-        add(leftPanel);
-        add(rightPanel);
+        add(UIHelper.createStatusBar(), BorderLayout.SOUTH);
     }
 
     public static void main(String[] args) {
+        Dotenv dotenv = Dotenv.configure()
+                .directory("./")
+                .ignoreIfMissing()
+                .load();
+        try {
+            UIManager.setLookAndFeel(UIManager.getSystemLookAndFeelClassName());
+            UIManager.put("Button.disabledText", new Color(173, 216, 230));
+
+        } catch (Exception e) {
+            e.printStackTrace();
+        }
 
         SwingUtilities.invokeLater(() -> {
             try {
-                String ipServer = "192.168.2.95";
+
+                String ipServer = dotenv.get("IP_SERVER", "192.168.2.1");
                 MainStart main = new MainStart(ipServer);
                 main.setVisible(true);
             } catch (Exception e) {

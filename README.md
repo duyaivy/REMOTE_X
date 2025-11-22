@@ -23,7 +23,7 @@ RemoteX là phần mềm Remote Desktop đơn giản được tích hợp tính 
 - Timestamp cho mỗi tin nhắn
 - Giao diện thân thiện
 
-### 3. **Giám Sát Bảo Mật AI** (MỚI!)
+### 3. **Giám Sát Bảo Mật AI**
 
 - Phát hiện hoạt động nguy hiểm realtime
 - 4 mức cảnh báo: CRITICAL, HIGH, MEDIUM, LOW

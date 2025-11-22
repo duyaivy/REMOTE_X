@@ -25,7 +25,8 @@ public class AlertService {
         String processName = (String) rawFeatures.get("process_name");
         String severity = result.getSeverity();
 
-        if (severity.equals("LOW") && preprocessor.isWhitelisted(processName)) {
+        if (preprocessor.isWhitelisted(processName) &&
+                !severity.equals("HIGH") && !severity.equals("CRITICAL")) {
             return;
         }
 

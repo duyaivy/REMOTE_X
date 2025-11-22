@@ -27,6 +27,9 @@ public class ShareScreen implements Runnable {
     private Socket screenSocket = null;
     private ChatWindow chatWindow;
 
+    private Thread captureThread;
+    private volatile boolean running = true;
+
     public ShareScreen(Socket screenSocket, Socket chatSocket) throws Exception {
         this.screenSocket = screenSocket;
         Thread shareThread = new Thread(this);
@@ -39,18 +42,35 @@ public class ShareScreen implements Runnable {
     @Override
     public void run() {
         try {
-            new Thread(new CaptureTask()).start();
+            captureThread = new Thread(new CaptureTask());
+            captureThread.start();
+
             try (DataOutputStream out = new DataOutputStream(screenSocket.getOutputStream())) {
-                System.out.println("ip: " + screenSocket.getInetAddress());
+                System.out.println("[ShareScreen] Gửi dữ liệu tới: " + screenSocket.getInetAddress());
+
+                // Đợi frame đầu tiên
                 ScreenFrame firstFrame;
-                while ((firstFrame = latestFrame.get()) == null) {
+                while ((firstFrame = latestFrame.get()) == null && running) {
                     Thread.sleep(100);
                 }
+
+                if (!running) {
+                    System.out.println("[ShareScreen] Stopped before sending first frame");
+                    return;
+                }
+
+                // Gửi width và height
                 out.writeInt(firstFrame.rawImage.getWidth());
                 out.writeInt(firstFrame.rawImage.getHeight());
+                out.flush();
+                System.out.println("[ShareScreen] ✅ Sent width=" + firstFrame.rawImage.getWidth() +
+                        " height=" + firstFrame.rawImage.getHeight());
 
+                // Gửi full frame đầu tiên
                 sendFullFrame(out, firstFrame);
-                while (!screenSocket.isClosed()) {
+
+                // Vòng lặp gửi frame
+                while (!screenSocket.isClosed() && running) {
                     ScreenFrame currentFrame = latestFrame.get();
                     if (currentFrame != null && currentFrame.sequence > lastSentSeq) {
                         Rectangle changeBox = findChangeBoundingBox(lastSentImage, currentFrame.rawImage);
@@ -67,21 +87,38 @@ public class ShareScreen implements Runnable {
                     Thread.sleep(1000 / fps);
                 }
             } catch (IOException e) {
-                // Sửa `socket` thành `screenSocket`
-                System.out.println("Client disconnected: " + screenSocket.getInetAddress());
+                if (running) {
+                    System.out.println("[ShareScreen] Client disconnected: " + screenSocket.getInetAddress());
+                } else {
+                    System.out.println("[ShareScreen] Stopped by request");
+                }
             }
         } catch (Exception e) {
-            System.err.println("ShareScreen error: " + e.getMessage());
+            System.err.println("[ShareScreen] Error: " + e.getMessage());
             e.printStackTrace();
         } finally {
+            stopCapture();
             try {
-                // Sửa `socket` thành `screenSocket`
                 if (screenSocket != null && !screenSocket.isClosed()) {
                     screenSocket.close();
                 }
             } catch (IOException e) {
-                System.err.println("Error closing socket: " + e.getMessage());
+                System.err.println("[ShareScreen] Error closing socket: " + e.getMessage());
             }
+            System.out.println("[ShareScreen] Thread ended");
+        }
+    }
+
+    public void stop() {
+        this.running = false;
+        stopCapture();
+        System.out.println("[ShareScreen] Stop requested");
+    }
+
+    private void stopCapture() {
+        if (captureThread != null && captureThread.isAlive()) {
+            captureThread.interrupt();
+            System.out.println("[ShareScreen] Stopped CaptureTask thread");
         }
     }
 
@@ -106,7 +143,9 @@ public class ShareScreen implements Runnable {
             try {
                 Robot robot = new Robot();
                 Rectangle screenRect = new Rectangle(Toolkit.getDefaultToolkit().getScreenSize());
-                while (!Thread.currentThread().isInterrupted()) {
+                System.out.println("[CaptureTask] Started capturing screen at " + fps + " FPS");
+
+                while (!Thread.currentThread().isInterrupted() && running) {
                     try {
                         BufferedImage screen = robot.createScreenCapture(screenRect);
                         latestFrame.set(new ScreenFrame(screen, ++sequence));
@@ -115,12 +154,13 @@ public class ShareScreen implements Runnable {
                         Thread.currentThread().interrupt();
                         break;
                     } catch (Exception e) {
-                        System.err.println("Error capturing screen: " + e.getMessage());
+                        System.err.println("[CaptureTask] Error capturing screen: " + e.getMessage());
                         Thread.sleep(1000); // Wait before retry
                     }
                 }
+                System.out.println("[CaptureTask] Stopped");
             } catch (Exception e) {
-                System.err.println("Failed to initialize screen capture: " + e.getMessage());
+                System.err.println("[CaptureTask] Failed to initialize: " + e.getMessage());
                 e.printStackTrace();
             }
         }
@@ -138,24 +178,21 @@ public class ShareScreen implements Runnable {
         this.lastSentImage = frame.rawImage;
         this.lastSentSeq = frame.sequence;
         if (frame.sequence % 30 == 0) {
-            System.out.println("FULL " + frame.sequence + " (" + compressedData.length / 1024 + " KB) cho "
-                    + screenSocket.getInetAddress());
+            System.out.println("[ShareScreen] FULL frame #" + frame.sequence +
+                    " (" + compressedData.length / 1024 + " KB) sent to " + screenSocket.getInetAddress());
         }
     }
 
     private void sendDeltaFrame(DataOutputStream out, ScreenFrame frame, Rectangle rect) throws IOException {
-
         BufferedImage deltaImage = frame.rawImage.getSubimage(rect.x, rect.y, rect.width, rect.height);
         byte[] compressedData = compressImage(deltaImage, quality);
 
         out.writeBoolean(false); // isFullFrame = false
         out.writeInt(frame.sequence);
-
         out.writeInt(rect.x);
         out.writeInt(rect.y);
         out.writeInt(rect.width);
         out.writeInt(rect.height);
-
         out.writeInt(compressedData.length);
         out.write(compressedData);
         out.flush();
@@ -163,17 +200,15 @@ public class ShareScreen implements Runnable {
         this.lastSentImage = frame.rawImage;
         this.lastSentSeq = frame.sequence;
         if (frame.sequence % 30 == 0) {
-            System.out.println("DELTA " + frame.sequence + " (" + compressedData.length / 1024 + " KB) cho "
-                    + screenSocket.getInetAddress());
+            System.out.println("[ShareScreen] DELTA frame #" + frame.sequence +
+                    " (" + compressedData.length / 1024 + " KB) sent to " + screenSocket.getInetAddress());
         }
     }
 
-    // Các hàm compressImage, findChangeBoundingBox, isBlockSame không thay đổi...
     private byte[] compressImage(BufferedImage image, float quality) throws IOException {
         ByteArrayOutputStream baos = new ByteArrayOutputStream();
         ImageWriter writer = ImageIO.getImageWritersByFormatName("jpg").next();
         ImageWriteParam param = writer.getDefaultWriteParam();
-        // SỬA LẠI:
         param.setCompressionMode(ImageWriteParam.MODE_EXPLICIT);
         param.setCompressionQuality(quality);
 
@@ -213,7 +248,6 @@ public class ShareScreen implements Runnable {
         }
 
         if (changed) {
-
             maxX = Math.min(width, maxX);
             maxY = Math.min(height, maxY);
             return new Rectangle(minX, minY, maxX - minX, maxY - minY);
@@ -228,7 +262,7 @@ public class ShareScreen implements Runnable {
         for (int j = y; j < endY; j++) {
             for (int i = x; i < endX; i++) {
                 if (oldImg.getRGB(i, j) != newImg.getRGB(i, j)) {
-                    return false; // Tìm thấy pixel khác nhau.
+                    return false;
                 }
             }
         }
