@@ -4,19 +4,20 @@ import java.io.InputStream;
 import java.io.OutputStream;
 import java.net.Socket;
 
+/**
+ * Relay thread cho TCP channels (Control + Chat)
+ * Forward data giữa sharer và viewer
+ */
 public class RelayThread extends Thread {
     private final InputStream inputStream;
     private final OutputStream outputStream;
     private final Socket fromSocket;
     private final Socket toSocket;
     private final Session session;
-    private final String senderType; // "sharer" hoặc "viewer"
+    private final String senderType; // "sharer-control", "viewer-chat", etc.
 
-    public RelayThread(Socket fromSocket, Socket toSocket) throws Exception {
-        this(fromSocket, toSocket, null, null);
-    }
-
-    public RelayThread(Socket fromSocket, Socket toSocket, Session session, String senderType) throws Exception {
+    public RelayThread(Socket fromSocket, Socket toSocket, Session session, String senderType)
+            throws Exception {
         this.fromSocket = fromSocket;
         this.toSocket = toSocket;
         this.inputStream = fromSocket.getInputStream();
@@ -24,16 +25,16 @@ public class RelayThread extends Thread {
         this.session = session;
         this.senderType = senderType;
 
-        System.out.println("[RelayThread] Created relay for: " + senderType);
+        System.out.println("[RelayThread] Created: " + senderType);
     }
 
     @Override
     public void run() {
-        byte[] buffer = new byte[16384];
+        byte[] buffer = new byte[16384]; // 16KB buffer
         int bytesRead;
 
         String threadName = Thread.currentThread().getName();
-        System.out.println("[RelayThread-" + threadName + "] Started: " + senderType + " relay");
+        System.out.println("[RelayThread-" + threadName + "] Started: " + senderType);
 
         try {
             while ((bytesRead = inputStream.read(buffer)) != -1) {
@@ -42,9 +43,11 @@ public class RelayThread extends Thread {
             }
             System.out.println("[RelayThread-" + threadName + "] Stream ended normally: " + senderType);
         } catch (Exception e) {
-            System.out.println("[RelayThread-" + threadName + "] Exception (" + senderType + "): " + e.getMessage());
+            System.out.println("[RelayThread-" + threadName + "] Exception (" + senderType + "): " +
+                    e.getMessage());
         } finally {
-            System.out.println("[RelayThread-" + threadName + "] Calling handleDisconnection for: " + senderType);
+            System.out.println("[RelayThread-" + threadName + "] Calling handleDisconnection for: " +
+                    senderType);
             handleDisconnection();
         }
     }
@@ -67,7 +70,7 @@ public class RelayThread extends Thread {
             boolean inGracePeriod = session.isInReconnectionGracePeriod();
 
             if (inGracePeriod) {
-                System.out.println("[" + threadName + "] In reconnection grace period - ignoring disconnect");
+                System.out.println("[" + threadName + "] In grace period - ignoring disconnect");
                 return;
             }
 
@@ -75,23 +78,14 @@ public class RelayThread extends Thread {
             boolean fromSocketIsCurrent = session.isCurrentSocket(fromSocket);
             boolean toSocketIsCurrent = session.isCurrentSocket(toSocket);
 
-            System.out.println("[" + threadName + "] fromSocket is current: " + fromSocketIsCurrent);
-            System.out.println("[" + threadName + "] toSocket is current: " + toSocketIsCurrent);
-
-            // Nếu socket không còn current → reconnection đang diễn ra
-            if (!toSocketIsCurrent) {
-                System.out.println("[" + threadName + "] toSocket is OLD - ignoring disconnect (reconnection)");
-                return;
-            }
-
-            if (!fromSocketIsCurrent) {
-                System.out.println("[" + threadName + "] fromSocket is OLD - ignoring disconnect (reconnection)");
+            if (!toSocketIsCurrent || !fromSocketIsCurrent) {
+                System.out.println("[" + threadName + "] Socket is OLD - ignoring (reconnection in progress)");
                 return;
             }
 
             // Xử lý disconnect
-            if ("sharer".equals(senderType)) {
-                System.out.println("[" + threadName + "] Detected SHARER disconnect - calling onSharerDisconnect()");
+            if (senderType.startsWith("sharer")) {
+                System.out.println("[" + threadName + "] Detected SHARER disconnect");
                 session.onSharerDisconnect(fromSocket);
 
                 // Đóng toSocket (viewer)
@@ -104,20 +98,12 @@ public class RelayThread extends Thread {
                     System.out.println("[" + threadName + "] Error closing toSocket: " + e.getMessage());
                 }
 
-            } else if ("viewer".equals(senderType)) {
-                System.out.println("[" + threadName + "] Detected VIEWER disconnect - calling onViewerDisconnect()");
+            } else if (senderType.startsWith("viewer")) {
+                System.out.println("[" + threadName + "] Detected VIEWER disconnect");
                 session.onViewerDisconnect(fromSocket);
 
                 // KHÔNG đóng toSocket (sharer vẫn online)
                 System.out.println("[" + threadName + "] NOT closing toSocket (sharer still online)");
-            }
-        } else {
-            System.out.println("[" + threadName + "] No session monitoring, closing both sockets");
-            try {
-                if (toSocket != null && !toSocket.isClosed()) {
-                    toSocket.close();
-                }
-            } catch (Exception e) {
             }
         }
 

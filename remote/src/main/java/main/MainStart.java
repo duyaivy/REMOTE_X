@@ -13,7 +13,12 @@ import server.ReceiveEvent;
 
 public class MainStart extends JFrame {
 
-    private static final int CHAT_PORT = 7000;
+    // ✅ Load TẤT CẢ ports từ .env
+    private static int SCREEN_PORT_TCP; // TCP handshake only
+    private static int SCREEN_PORT_UDP; // UDP data
+    private static int CONTROL_PORT;
+    private static int CHAT_PORT;
+    private static String IP_SERVER;
 
     public MainStart(String ipServer) {
         setTitle("Remote X");
@@ -127,9 +132,7 @@ public class MainStart extends JFrame {
 
         btnStartShare.addActionListener(e -> {
             String username = txtIDBan.getText().trim();
-
             String password = new String(txtMatKhau.getPassword()).trim();
-
             boolean enableMonitoring = chkMonitoring.isSelected();
 
             if (username.isEmpty() || password.isEmpty()) {
@@ -139,39 +142,58 @@ public class MainStart extends JFrame {
                 btnStartShare.setText("Đang kết nối...");
                 SwingWorker<Void, Void> worker = new SwingWorker<Void, Void>() {
 
+                    // ✅ CHỈ CẦN CONTROL VÀ CHAT TCP, SCREEN QUA UDP
                     private Socket socketScreen, socketControl, socketChat;
                     private GraphicsEnvironment gEnv = GraphicsEnvironment.getLocalGraphicsEnvironment();
                     private GraphicsDevice gDev = gEnv.getDefaultScreenDevice();
 
                     @Override
                     protected Void doInBackground() throws Exception {
-
                         try {
-                            socketScreen = new Socket(ipServer, 5000);
-                            socketControl = new Socket(ipServer, 6000);
+                            // ✅ KẾT NỐI TCP CHO HANDSHAKE
+                            socketScreen = new Socket(ipServer, SCREEN_PORT_TCP);
+                            socketControl = new Socket(ipServer, CONTROL_PORT);
                             socketChat = new Socket(ipServer, CHAT_PORT);
-                            String initMessage = username + "," + password + ",sharer," + screen.getWidth() + ","
-                                    + screen.getHeight();
+
+                            String initMessage = username + "," + password + ",sharer," +
+                                    screen.getWidth() + "," + screen.getHeight();
+
                             DataOutputStream dosScreen = new DataOutputStream(socketScreen.getOutputStream());
                             DataOutputStream dosControl = new DataOutputStream(socketControl.getOutputStream());
                             DataOutputStream dosChat = new DataOutputStream(socketChat.getOutputStream());
+
                             dosScreen.writeUTF(initMessage + ",screen");
                             dosControl.writeUTF(initMessage + ",control");
                             dosChat.writeUTF(initMessage + ",chat");
                             dosScreen.flush();
                             dosControl.flush();
                             dosChat.flush();
+
                             DataInputStream disScreen = new DataInputStream(socketScreen.getInputStream());
                             DataInputStream disControl = new DataInputStream(socketControl.getInputStream());
                             DataInputStream disChat = new DataInputStream(socketChat.getInputStream());
+
                             String responseScreen = disScreen.readUTF();
                             String responseControl = disControl.readUTF();
                             String responseChat = disChat.readUTF();
+
+                            System.out.println("[SHARER] Screen response: " + responseScreen);
+                            System.out.println("[SHARER] Control response: " + responseControl);
+                            System.out.println("[SHARER] Chat response: " + responseChat);
+
                             if (responseScreen.startsWith("false") || responseControl.startsWith("false")
                                     || responseChat.startsWith("false")) {
-                                throw new Exception("Server response: " + responseScreen + " | " + responseControl
-                                        + " | " + responseChat);
+                                throw new Exception("Server response: " + responseScreen + " | " +
+                                        responseControl + " | " + responseChat);
                             }
+
+                            // ✅ SCREEN RESPONSE SẼ NÓI: "true,Use UDP on port 5001"
+                            // → ĐÓNG SOCKET TCP NGAY
+                            socketScreen.close();
+                            socketScreen = null; // Đánh dấu không dùng nữa
+
+                            System.out.println("[SHARER] ✓ Screen will use UDP port " + SCREEN_PORT_UDP);
+
                         } catch (Exception e) {
                             try {
                                 if (socketScreen != null)
@@ -195,16 +217,19 @@ public class MainStart extends JFrame {
 
                     @Override
                     protected void done() {
-
                         try {
                             get();
-                            JOptionPane.showMessageDialog(MainStart.this, "Kết nối thành công! Đang chờ đối tác...");
+                            JOptionPane.showMessageDialog(MainStart.this,
+                                    "Kết nối thành công! Đang chờ đối tác...");
                             btnStartShare.setText("Đang chia sẻ...");
 
                             if (enableMonitoring) {
                                 new Thread(() -> {
                                     try {
-                                        MonitoringManager.getInstance().startMonitoring(socketScreen, socketChat,
+                                        // ⚠️ Chỉ truyền control và chat, không có screen socket
+                                        MonitoringManager.getInstance().startMonitoring(
+                                                null, // socketScreen = null vì dùng UDP
+                                                socketChat,
                                                 socketControl);
                                     } catch (Exception monitorEx) {
                                         JOptionPane.showMessageDialog(MainStart.this,
@@ -218,19 +243,24 @@ public class MainStart extends JFrame {
                             }
 
                             Robot rb = new Robot(gDev);
-                            new ReceiveEvent(socketControl, socketScreen, socketChat, rb, screen.height, screen.width,
-                                    btnStartShare);
+
+                            // ✅ TRUYỀN NULL CHO screenSocket VÌ DÙNG UDP
+                            new ReceiveEvent(
+                                    socketControl,
+                                    null, // ← socketScreen = null (không dùng TCP)
+                                    socketChat,
+                                    rb,
+                                    screen.height,
+                                    screen.width,
+                                    btnStartShare,
+                                    username);
+
                         } catch (Exception ex) {
                             ex.printStackTrace();
                             JOptionPane.showMessageDialog(MainStart.this,
-                                    "Không thể kết nối đến server: " + ex.getMessage(), "Lỗi",
-                                    JOptionPane.ERROR_MESSAGE);
+                                    "Không thể kết nối đến server: " + ex.getMessage(),
+                                    "Lỗi", JOptionPane.ERROR_MESSAGE);
 
-                            try {
-                                if (socketScreen != null)
-                                    socketScreen.close();
-                            } catch (Exception e) {
-                            }
                             try {
                                 if (socketControl != null)
                                     socketControl.close();
@@ -241,6 +271,7 @@ public class MainStart extends JFrame {
                                     socketChat.close();
                             } catch (Exception e) {
                             }
+
                             btnStartShare.setEnabled(true);
                             btnStartShare.setText("Cho phép điều khiển");
                         }
@@ -250,6 +281,7 @@ public class MainStart extends JFrame {
             }
         });
 
+        // ===== PHẦN VIEWER GIỮ NGUYÊN (CHƯA SỬA) =====
         JPanel rightPanel = UIHelper.createStyledPanel();
 
         JPanel rightHeader = UIHelper.createHeaderPanel("Điều khiển máy tính khác", UIHelper.createComputerIcon());
@@ -271,7 +303,6 @@ public class MainStart extends JFrame {
         gbcRight.insets = new Insets(0, 5, 20, 5);
         rightContent.add(lblDescRight, gbcRight);
 
-        // --- Reset GBC ---
         gbcRight.gridwidth = 1;
         gbcRight.insets = new Insets(5, 5, 5, 5);
 
@@ -330,6 +361,8 @@ public class MainStart extends JFrame {
         rightContent.add(btnStart, gbcRight);
 
         rightPanel.add(rightContent, BorderLayout.CENTER);
+
+        // ⚠️ VIEWER CODE - CHƯA SỬA SANG UDP (SẼ LÀM SAU)
         btnStart.addActionListener(e -> {
             String partnerID = txtIDDT.getText().trim();
             String partnerPassword = new String(txtMKDT.getPassword()).trim();
@@ -346,26 +379,26 @@ public class MainStart extends JFrame {
             SwingWorker<Void, Void> controlWorker = new SwingWorker<Void, Void>() {
 
                 private Socket socketScreen, socketControl, socketChat;
-                private DataInputStream disControl; // Giữ luồng đọc
+                private DataInputStream disControl;
                 private float remoteWidth, remoteHeight;
-
                 private GraphicsEnvironment gEnv = GraphicsEnvironment.getLocalGraphicsEnvironment();
                 private GraphicsDevice gDev = gEnv.getDefaultScreenDevice();
-
                 private String serverErrorMessage = null;
 
                 @Override
                 protected Void doInBackground() throws Exception {
-
                     try {
-                        socketScreen = new Socket(ipServer, 5000);
-                        socketControl = new Socket(ipServer, 6000);
+                        socketScreen = new Socket(ipServer, SCREEN_PORT_TCP);
+                        socketControl = new Socket(ipServer, CONTROL_PORT);
                         socketChat = new Socket(ipServer, CHAT_PORT);
-                        String initMessage = partnerID + "," + partnerPassword + ",viewer," + screen.getWidth() + ","
-                                + screen.getHeight();
+
+                        String initMessage = partnerID + "," + partnerPassword + ",viewer," +
+                                screen.getWidth() + "," + screen.getHeight();
+
                         DataOutputStream dosScreen = new DataOutputStream(socketScreen.getOutputStream());
                         DataOutputStream dosControl = new DataOutputStream(socketControl.getOutputStream());
                         DataOutputStream dosChat = new DataOutputStream(socketChat.getOutputStream());
+
                         dosScreen.writeUTF(initMessage + ",screen");
                         dosControl.writeUTF(initMessage + ",control");
                         dosChat.writeUTF(initMessage + ",chat");
@@ -382,7 +415,7 @@ public class MainStart extends JFrame {
                         String responseChat = disChat.readUTF();
 
                         if (responseScreen.startsWith("false")) {
-                            serverErrorMessage = responseScreen.split(",")[1]; // Lấy "Session not found"
+                            serverErrorMessage = responseScreen.split(",")[1];
                             throw new Exception(serverErrorMessage);
                         }
                         if (responseControl.startsWith("false")) {
@@ -393,6 +426,7 @@ public class MainStart extends JFrame {
                             serverErrorMessage = responseChat.split(",")[1];
                             throw new Exception(serverErrorMessage);
                         }
+
                         String[] res = responseScreen.split(",");
                         if (res.length < 3) {
                             throw new Exception("Lỗi dữ liệu trả về: " + responseScreen);
@@ -422,7 +456,6 @@ public class MainStart extends JFrame {
 
                 @Override
                 protected void done() {
-
                     try {
                         get();
                         JOptionPane.showMessageDialog(MainStart.this, "Kết nối thành công! Bắt đầu điều khiển.");
@@ -430,7 +463,7 @@ public class MainStart extends JFrame {
                     } catch (Exception ex) {
                         ex.printStackTrace();
                         JOptionPane.showMessageDialog(MainStart.this,
-                                "Không thể kết nối đến đối tác: " + serverErrorMessage, // Dùng biến mới
+                                "Không thể kết nối đến đối tác: " + serverErrorMessage,
                                 "Lỗi kết nối",
                                 JOptionPane.ERROR_MESSAGE);
                     } finally {
@@ -450,10 +483,28 @@ public class MainStart extends JFrame {
     }
 
     public static void main(String[] args) {
+        // ✅ LOAD TẤT CẢ PORTS TỪ .env
         Dotenv dotenv = Dotenv.configure()
                 .directory("./")
                 .ignoreIfMissing()
                 .load();
+
+        IP_SERVER = dotenv.get("IP_SERVER", "localhost");
+        SCREEN_PORT_TCP = Integer.parseInt(dotenv.get("SCREEN_PORT", "5000"));
+        SCREEN_PORT_UDP = Integer.parseInt(dotenv.get("SCREEN_PORT_UDP", "5001"));
+        CONTROL_PORT = Integer.parseInt(dotenv.get("CONTROL_PORT", "6000"));
+        CHAT_PORT = Integer.parseInt(dotenv.get("CHAT_PORT", "7000"));
+
+        System.out.println("═══════════════════════════════════════");
+        System.out.println("    REMOTE X CLIENT (UDP MODE)");
+        System.out.println("═══════════════════════════════════════");
+        System.out.println("Server: " + IP_SERVER);
+        System.out.println("Screen TCP (handshake): " + SCREEN_PORT_TCP);
+        System.out.println("Screen UDP (data):      " + SCREEN_PORT_UDP); // ← QUAN TRỌNG!
+        System.out.println("Control Port: " + CONTROL_PORT);
+        System.out.println("Chat Port: " + CHAT_PORT);
+        System.out.println("═══════════════════════════════════════");
+
         try {
             UIManager.setLookAndFeel(UIManager.getSystemLookAndFeelClassName());
             UIManager.put("Button.disabledText", new Color(173, 216, 230));
@@ -464,9 +515,7 @@ public class MainStart extends JFrame {
 
         SwingUtilities.invokeLater(() -> {
             try {
-
-                String ipServer = dotenv.get("IP_SERVER", "192.168.2.1");
-                MainStart main = new MainStart(ipServer);
+                MainStart main = new MainStart(IP_SERVER);
                 main.setVisible(true);
             } catch (Exception e) {
                 e.printStackTrace();

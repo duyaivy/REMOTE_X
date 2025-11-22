@@ -14,13 +14,17 @@ public class ReceiveEvent extends Thread {
     private int h, w;
 
     private Socket controlSocket;
-    private Socket screenSocket;
+    private Socket screenSocket; // ⚠️ Không dùng nữa với UDP, nhưng giữ lại
     private Socket chatSocket;
     private JButton btnStartShare;
-    private ShareScreen currentShareScreen = null;
+    private ShareScreenUDP currentShareScreen = null; // ✅ Đổi sang UDP
+
+    // ✅ THÊM
+    private String relayHost = "localhost";
+    private String username;
 
     public ReceiveEvent(Socket controlSocket, Socket screenSocket, Socket chatSocket,
-            Robot robot, int h, int w, JButton btnStartShare) {
+            Robot robot, int h, int w, JButton btnStartShare, String username) {
 
         this.controlSocket = controlSocket;
         this.screenSocket = screenSocket;
@@ -28,8 +32,9 @@ public class ReceiveEvent extends Thread {
         this.robot = robot;
         this.h = h;
         this.w = w;
-
         this.btnStartShare = btnStartShare;
+        this.username = username; // ✅ Lưu username
+
         try {
             this.dis = new DataInputStream(this.controlSocket.getInputStream());
         } catch (Exception e) {
@@ -42,18 +47,21 @@ public class ReceiveEvent extends Thread {
     @Override
     public void run() {
         try {
-
             while (true) {
                 String data = dis.readUTF();
 
                 if (data.equals("START_SESSION")) {
-                    System.out.println("ReceiveEvent (Sharer): Nhận START_SESSION - Khởi động ShareScreen");
+                    System.out.println("ReceiveEvent: Nhận START_SESSION - Khởi động ShareScreenUDP");
 
                     new Thread(() -> {
                         try {
-                            currentShareScreen = new ShareScreen(this.screenSocket, this.chatSocket);
+                            // ✅ Dùng ShareScreenUDP với username thật
+                            currentShareScreen = new ShareScreenUDP(
+                                    relayHost,
+                                    username,
+                                    this.chatSocket);
                         } catch (Exception e) {
-                            System.err.println("Error starting ShareScreen: " + e.getMessage());
+                            System.err.println("Error starting ShareScreenUDP: " + e.getMessage());
                             e.printStackTrace();
                         }
                     }).start();
@@ -62,20 +70,23 @@ public class ReceiveEvent extends Thread {
                 }
 
                 if (data.equals("RESTART_SHARESCREEN")) {
-                    System.out.println("ReceiveEvent (Sharer): Nhận RESTART_SHARESCREEN");
+                    System.out.println("ReceiveEvent: Nhận RESTART_SHARESCREEN");
 
                     if (currentShareScreen != null) {
                         currentShareScreen.stop();
-                        System.out.println("ReceiveEvent (Sharer): Đã dừng ShareScreen cũ");
-                        Thread.sleep(500); // Đợi thread cũ dừng hoàn toàn
+                        System.out.println("ReceiveEvent: Đã dừng ShareScreenUDP cũ");
+                        Thread.sleep(500);
                     }
 
                     new Thread(() -> {
                         try {
-                            currentShareScreen = new ShareScreen(this.screenSocket, this.chatSocket);
-                            System.out.println("ReceiveEvent (Sharer): Đã khởi động ShareScreen mới");
+                            currentShareScreen = new ShareScreenUDP(
+                                    relayHost,
+                                    username,
+                                    this.chatSocket);
+                            System.out.println("ReceiveEvent: Đã khởi động ShareScreenUDP mới");
                         } catch (Exception e) {
-                            System.err.println("Error restarting ShareScreen: " + e.getMessage());
+                            System.err.println("Error restarting ShareScreenUDP: " + e.getMessage());
                             e.printStackTrace();
                         }
                     }).start();
@@ -83,6 +94,7 @@ public class ReceiveEvent extends Thread {
                     continue;
                 }
 
+                // ===== XỬ LÝ CONTROL EVENTS (GIỮ NGUYÊN) =====
                 try {
                     String[] parts = data.split(",");
                     if (parts.length == 0) {
@@ -93,35 +105,35 @@ public class ReceiveEvent extends Thread {
                     int command = Integer.parseInt(parts[0]);
 
                     switch (command) {
-                        case -1: {
+                        case -1: { // Mouse press
                             int buttonMask = getButtonMask(Integer.parseInt(parts[1]));
                             if (buttonMask != 0) {
                                 robot.mousePress(buttonMask);
                             }
                             break;
                         }
-                        case -2: {
+                        case -2: { // Mouse release
                             int releaseMask = getButtonMask(Integer.parseInt(parts[1]));
                             if (releaseMask != 0) {
                                 robot.mouseRelease(releaseMask);
                             }
                             break;
                         }
-                        case -3: {
+                        case -3: { // Key press
                             int keycode = Integer.parseInt(parts[1]);
                             if (isValidKeyCode(keycode)) {
                                 robot.keyPress(keycode);
                             }
                             break;
                         }
-                        case -4: {
+                        case -4: { // Key release
                             int keycode = Integer.parseInt(parts[1]);
                             if (isValidKeyCode(keycode)) {
                                 robot.keyRelease(keycode);
                             }
                             break;
                         }
-                        case -5: {
+                        case -5: { // Mouse move
                             if (parts.length < 4) {
                                 break;
                             }
@@ -141,7 +153,6 @@ public class ReceiveEvent extends Thread {
                             break;
                         case -8: { // Mouse drag
                             if (parts.length < 4) {
-
                                 break;
                             }
                             double xRatio = Double.parseDouble(parts[2]);
@@ -168,10 +179,9 @@ public class ReceiveEvent extends Thread {
         } catch (IOException e) {
             e.printStackTrace();
         } catch (Exception e) {
-
             e.printStackTrace();
         } finally {
-
+            // Cleanup
             if (currentShareScreen != null) {
                 currentShareScreen.stop();
             }

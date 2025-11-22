@@ -2,9 +2,15 @@ package server;
 
 import java.io.DataOutputStream;
 import java.io.IOException;
+import java.net.InetAddress;
 import java.net.Socket;
 import java.util.Map;
 
+/**
+ * Quản lý một session screen sharing
+ * - TCP sockets: Control + Chat
+ * - UDP info: Screen data addresses
+ */
 public class Session {
     private final String username;
     private final String password;
@@ -12,21 +18,25 @@ public class Session {
     private final String height;
     private final Map<String, Session> sessionMap;
 
+    // TCP sockets (Control + Chat only)
     private Socket sharerControlSocket;
-    private Socket sharerScreenSocket;
-    private Socket viewerControlSocket;
-    private Socket viewerScreenSocket;
     private Socket sharerChatSocket;
+    private Socket viewerControlSocket;
     private Socket viewerChatSocket;
-    private boolean relayStarted = false;
 
+    // UDP info (Screen data)
+    private boolean sharerScreenReady = false;
+    private boolean viewerScreenReady = false;
+    private UDPClientInfo sharerUDPInfo;
+    private UDPClientInfo viewerUDPInfo;
+
+    private boolean relayStarted = false;
     private String status;
     private boolean startSessionSent = false;
-    private boolean sharerDisconnectCalled = false;
-    private boolean viewerDisconnectCalled = false;
     private long lastReconnectionTime = 0;
 
-    public Session(String username, String password, String width, String height, Map<String, Session> sessionMap) {
+    public Session(String username, String password, String width, String height,
+            Map<String, Session> sessionMap) {
         this.username = username;
         this.password = password;
         this.width = width;
@@ -34,15 +44,20 @@ public class Session {
         this.sessionMap = sessionMap;
         this.status = "waiting";
 
-        System.out.println("[Session] Created new session: " + username + " with status: " + this.status);
+        System.out.println("[Session] Created: " + username + " (" + width + "x" + height + ")");
     }
+
+    // ===== BASIC GETTERS =====
 
     public boolean checkPassword(String password) {
         return this.password.equals(password);
     }
 
     public synchronized boolean isSharerReady() {
-        return sharerControlSocket != null && sharerScreenSocket != null && sharerChatSocket != null;
+        // Sharer ready = Control TCP + Chat TCP + Screen UDP registered
+        return sharerControlSocket != null &&
+                sharerChatSocket != null &&
+                sharerScreenReady;
     }
 
     public synchronized String getStatus() {
@@ -61,186 +76,155 @@ public class Session {
         return height;
     }
 
+    public String getUsername() {
+        return username;
+    }
+
+    // ===== UDP METHODS =====
+
+    public synchronized void setSharerScreenReady(boolean ready) {
+        this.sharerScreenReady = ready;
+        System.out.println("[Session] Sharer screen ready: " + ready);
+    }
+
+    public synchronized void setViewerScreenReady(boolean ready) {
+        this.viewerScreenReady = ready;
+        System.out.println("[Session] Viewer screen ready: " + ready);
+    }
+
+    /**
+     * Đăng ký địa chỉ UDP của sharer
+     */
+    public synchronized void registerSharerUDP(InetAddress addr, int port, int clientId) {
+        this.sharerUDPInfo = new UDPClientInfo(addr, port, clientId);
+        System.out.println("[Session] ✓ Sharer UDP registered: " + sharerUDPInfo);
+        checkAllConnectionsReady();
+    }
+
+    /**
+     * Đăng ký địa chỉ UDP của viewer
+     */
+    public synchronized void registerViewerUDP(InetAddress addr, int port, int clientId) {
+        this.viewerUDPInfo = new UDPClientInfo(addr, port, clientId);
+        System.out.println("[Session] ✓ Viewer UDP registered: " + viewerUDPInfo);
+        checkAllConnectionsReady();
+    }
+
+    public synchronized UDPClientInfo getSharerUDPInfo() {
+        return sharerUDPInfo;
+    }
+
+    public synchronized UDPClientInfo getViewerUDPInfo() {
+        return viewerUDPInfo;
+    }
+
+    // ===== TCP METHODS =====
+
+    /**
+     * Set TCP socket cho sharer (Control hoặc Chat)
+     */
+    public synchronized void setSharerSocket(Socket socket, String connectType)
+            throws IOException {
+        if (connectType.equals("control")) {
+            this.sharerControlSocket = socket;
+            System.out.println("[Session] Sharer control socket set");
+        } else if (connectType.equals("chat")) {
+            this.sharerChatSocket = socket;
+            System.out.println("[Session] Sharer chat socket set");
+        }
+        checkAllConnectionsReady();
+    }
+
+    /**
+     * Set TCP socket cho viewer (Control hoặc Chat)
+     */
+    public synchronized void setViewerSocketAndAttemptRelay(Socket viewerSocket,
+            String connectType) {
+        if ("control".equals(connectType)) {
+            this.viewerControlSocket = viewerSocket;
+            System.out.println("[Session] Viewer control socket set");
+        } else if ("chat".equals(connectType)) {
+            this.viewerChatSocket = viewerSocket;
+            System.out.println("[Session] Viewer chat socket set");
+        }
+
+        checkAllConnectionsReady();
+    }
+
+    /**
+     * Kiểm tra tất cả connections đã sẵn sàng chưa
+     * Cần: Control TCP (2), Chat TCP (2), Screen UDP (2)
+     */
+    private void checkAllConnectionsReady() {
+        boolean allReady = sharerControlSocket != null && viewerControlSocket != null &&
+                sharerChatSocket != null && viewerChatSocket != null &&
+                sharerUDPInfo != null && viewerUDPInfo != null;
+
+        if (allReady && !relayStarted) {
+            System.out.println("[Session] ✓✓✓ ALL connections ready! Starting relay...");
+            startRelay();
+        } else if (!allReady) {
+            System.out.println("[Session] ⏳ Waiting for connections:");
+            System.out.println("  - Sharer Control TCP: " + (sharerControlSocket != null ? "✓" : "✗"));
+            System.out.println("  - Viewer Control TCP: " + (viewerControlSocket != null ? "✓" : "✗"));
+            System.out.println("  - Sharer Chat TCP:    " + (sharerChatSocket != null ? "✓" : "✗"));
+            System.out.println("  - Viewer Chat TCP:    " + (viewerChatSocket != null ? "✓" : "✗"));
+            System.out.println("  - Sharer Screen UDP:  " + (sharerUDPInfo != null ? "✓" : "✗"));
+            System.out.println("  - Viewer Screen UDP:  " + (viewerUDPInfo != null ? "✓" : "✗"));
+        }
+    }
+
+    /**
+     * Khởi động relay threads cho TCP channels
+     */
+    private void startRelay() {
+        this.relayStarted = true;
+        this.status = "active";
+
+        System.out.println("[Session] ═══════════════════════════════════");
+        System.out.println("[Session] Status changed to: ACTIVE");
+        System.out.println("[Session] ═══════════════════════════════════");
+
+        try {
+            // Gửi START_SESSION signal qua Control channel
+            if (!startSessionSent) {
+                DataOutputStream sharerDos = new DataOutputStream(
+                        sharerControlSocket.getOutputStream());
+                sharerDos.writeUTF("START_SESSION");
+                sharerDos.flush();
+                startSessionSent = true;
+                System.out.println("[Session] ✓ START_SESSION sent to sharer");
+            }
+
+            // Start TCP relay threads (Control + Chat only, Screen qua UDP)
+            System.out.println("[Session] Starting TCP relay threads...");
+
+            new RelayThread(sharerControlSocket, viewerControlSocket, this, "sharer-control").start();
+            new RelayThread(viewerControlSocket, sharerControlSocket, this, "viewer-control").start();
+
+            new RelayThread(sharerChatSocket, viewerChatSocket, this, "sharer-chat").start();
+            new RelayThread(viewerChatSocket, sharerChatSocket, this, "viewer-chat").start();
+
+            System.out.println("[Session] ✓ All TCP relay threads started");
+            System.out.println("[Session] ✓ UDP relay handled by UDPRelayHandler");
+
+        } catch (Exception e) {
+            System.err.println("[Session] ✗ Failed to start relay: " + e.getMessage());
+            e.printStackTrace();
+            cleanup();
+        }
+    }
+
+    // ===== DISCONNECT HANDLING =====
+
     public synchronized boolean isInReconnectionGracePeriod() {
         long timeSinceReconnection = System.currentTimeMillis() - lastReconnectionTime;
-        return timeSinceReconnection < 3000; // 3 giây grace period
+        return timeSinceReconnection < 3000; // 3 seconds grace period
     }
 
     public synchronized boolean isCurrentSocket(Socket socket) {
-        return socket == sharerControlSocket || socket == sharerScreenSocket || socket == sharerChatSocket ||
-                socket == viewerControlSocket || socket == viewerScreenSocket || socket == viewerChatSocket;
-    }
-
-    public synchronized void setSharerSocket(Socket socket, String connectType) throws IOException {
-        if (connectType.equals("screen")) {
-            this.sharerScreenSocket = socket;
-        } else if (connectType.equals("control")) {
-            this.sharerControlSocket = socket;
-        } else if (connectType.equals("chat")) {
-            this.sharerChatSocket = socket;
-        }
-    }
-
-    public synchronized void setViewerSocketAndAttemptRelay(Socket viewerSocket, String connectType) {
-
-        if (relayStarted && "active".equals(status)) {
-            handleViewerReconnection(viewerSocket, connectType);
-
-            // Kiểm tra xem đã reconnect đủ 3 socket chưa
-            if (viewerScreenSocket != null && viewerControlSocket != null && viewerChatSocket != null) {
-                System.out.println("[Session] ✅ All viewer sockets reconnected - changing status to ACTIVE");
-                this.status = "active";
-                this.relayStarted = true;
-                this.viewerDisconnectCalled = false;
-            }
-
-            return;
-        }
-
-        System.out.println("[Session] Viewer connecting (" + connectType + "). Current status: " + status);
-
-        if ("screen".equals(connectType)) {
-            this.viewerScreenSocket = viewerSocket;
-        } else if ("control".equals(connectType)) {
-            this.viewerControlSocket = viewerSocket;
-        } else if ("chat".equals(connectType)) {
-            this.viewerChatSocket = viewerSocket;
-        }
-
-        // Kiểm tra đủ 6 sockets
-        if (sharerScreenSocket != null && viewerScreenSocket != null &&
-                sharerControlSocket != null && viewerControlSocket != null &&
-                sharerChatSocket != null && viewerChatSocket != null) {
-
-            System.out.println("[Session] All 6 sockets connected. Sending START_SESSION signal...");
-            this.relayStarted = true;
-            this.status = "active";
-            this.viewerDisconnectCalled = false;
-
-            System.out.println("[Session] Status changed to: " + this.status + " for user: " + this.username);
-
-            try {
-                if (!startSessionSent) {
-                    DataOutputStream sharerDos = new DataOutputStream(sharerControlSocket.getOutputStream());
-                    sharerDos.writeUTF("START_SESSION");
-                    sharerDos.flush();
-                    startSessionSent = true;
-                    System.out.println("[Session] ✅ START_SESSION sent to sharer");
-                } else {
-                    System.out.println("[Session] ⏭️ START_SESSION already sent, skipping...");
-                }
-
-                System.out.println("[Session] Starting relay threads...");
-
-                new RelayThread(sharerScreenSocket, viewerScreenSocket, this, "sharer").start();
-                new RelayThread(viewerScreenSocket, sharerScreenSocket, this, "viewer").start();
-
-                new RelayThread(sharerControlSocket, viewerControlSocket, this, "sharer").start();
-                new RelayThread(viewerControlSocket, sharerControlSocket, this, "viewer").start();
-
-                new RelayThread(sharerChatSocket, viewerChatSocket, this, "sharer").start();
-                new RelayThread(viewerChatSocket, sharerChatSocket, this, "viewer").start();
-
-            } catch (Exception e) {
-                System.err.println("[Session] Failed to send START_SESSION or start relay: " + e.getMessage());
-                cleanup();
-            }
-        }
-    }
-
-    private void handleViewerReconnection(Socket newSocket, String connectType) {
-        System.out.println("[Session] Handling viewer reconnection for: " + connectType);
-
-        // Đánh dấu thời gian reconnection
-        this.lastReconnectionTime = System.currentTimeMillis();
-
-        try {
-            Socket oldSocket = null;
-
-            if ("screen".equals(connectType)) {
-                oldSocket = this.viewerScreenSocket;
-                this.viewerScreenSocket = newSocket;
-                System.out.println("[Session] Replaced viewerScreenSocket");
-
-            } else if ("control".equals(connectType)) {
-                oldSocket = this.viewerControlSocket;
-                this.viewerControlSocket = newSocket;
-                System.out.println("[Session] Replaced viewerControlSocket");
-
-            } else if ("chat".equals(connectType)) {
-                oldSocket = this.viewerChatSocket;
-                this.viewerChatSocket = newSocket;
-                System.out.println("[Session] Replaced viewerChatSocket");
-            }
-
-            // Đóng old socket TRƯỚC KHI restart relay
-            if (oldSocket != null && !oldSocket.isClosed()) {
-                try {
-                    oldSocket.close();
-                    System.out.println("[Session] Closed old viewer socket for: " + connectType);
-                    Thread.sleep(100); // Đợi thread cũ cleanup
-                } catch (Exception e) {
-                    System.err.println("[Session] Error closing old socket: " + e.getMessage());
-                }
-            }
-
-            // Restart relay threads với socket mới
-            restartRelayForConnection(connectType);
-
-            // Nếu là screen socket, gửi signal restart ShareScreen
-            if ("screen".equals(connectType)) {
-                restartShareScreen();
-            }
-
-            System.out.println("[Session] ✅ Viewer reconnection successful for: " + connectType);
-
-        } catch (Exception e) {
-            System.err.println("[Session] ❌ Error during viewer reconnection: " + e.getMessage());
-            e.printStackTrace();
-        }
-    }
-
-    private void restartShareScreen() {
-        try {
-            if (sharerControlSocket == null || sharerControlSocket.isClosed()) {
-                System.err.println("[Session] ❌ Cannot send RESTART_SHARESCREEN - sharerControlSocket is closed");
-                return;
-            }
-
-            DataOutputStream sharerDos = new DataOutputStream(sharerControlSocket.getOutputStream());
-            sharerDos.writeUTF("RESTART_SHARESCREEN");
-            sharerDos.flush();
-            System.out.println("[Session] ✅ Sent RESTART_SHARESCREEN signal to sharer");
-        } catch (Exception e) {
-            System.err.println("[Session] ❌ Error sending RESTART_SHARESCREEN: " + e.getMessage());
-            e.printStackTrace();
-        }
-    }
-
-    private void restartRelayForConnection(String connectType) {
-        System.out.println("[Session] Restarting relay threads for: " + connectType);
-
-        try {
-            if ("screen".equals(connectType)) {
-                new RelayThread(sharerScreenSocket, viewerScreenSocket, this, "sharer").start();
-                new RelayThread(viewerScreenSocket, sharerScreenSocket, this, "viewer").start();
-                System.out.println("[Session] ✅ Restarted screen relay threads");
-
-            } else if ("control".equals(connectType)) {
-                new RelayThread(sharerControlSocket, viewerControlSocket, this, "sharer").start();
-                new RelayThread(viewerControlSocket, sharerControlSocket, this, "viewer").start();
-                System.out.println("[Session] ✅ Restarted control relay threads");
-
-            } else if ("chat".equals(connectType)) {
-                new RelayThread(sharerChatSocket, viewerChatSocket, this, "sharer").start();
-                new RelayThread(viewerChatSocket, sharerChatSocket, this, "viewer").start();
-                System.out.println("[Session] ✅ Restarted chat relay threads");
-            }
-
-        } catch (Exception e) {
-            System.err.println("[Session] ❌ Error restarting relay: " + e.getMessage());
-            e.printStackTrace();
-        }
+        return socket == sharerControlSocket || socket == sharerChatSocket ||
+                socket == viewerControlSocket || socket == viewerChatSocket;
     }
 
     public synchronized void onSharerDisconnect(Socket disconnectedSocket) {
@@ -249,15 +233,10 @@ public class Session {
             return;
         }
 
-        if (sharerDisconnectCalled) {
-            System.out.println("[Session] onSharerDisconnect() already called, skipping...");
-            return;
-        }
-        sharerDisconnectCalled = true;
+        System.out.println("[Session] ✗ Sharer disconnected, cleaning up session");
         cleanup();
         sessionMap.remove(this.username);
-
-        System.out.println("[Session] Session removed from map: " + username);
+        System.out.println("[Session] Session removed: " + username);
     }
 
     public synchronized void onViewerDisconnect(Socket disconnectedSocket) {
@@ -266,84 +245,79 @@ public class Session {
             return;
         }
 
-        if (viewerDisconnectCalled) {
-            System.out.println("[Session] onViewerDisconnect() already called, skipping...");
-            return;
-        }
-        viewerDisconnectCalled = true;
+        System.out.println("[Session] ⚠ Viewer disconnected");
 
-        // Chỉ đổi status nếu KHÔNG trong grace period
         if (!isInReconnectionGracePeriod()) {
             this.status = "waiting";
             this.relayStarted = false;
-            System.out.println("[Session] Status changed to: " + this.status);
+            System.out.println("[Session] Status changed to: waiting");
         } else {
-            System.out.println("[Session] ⏸️ In grace period - keeping status: " + this.status);
+            System.out.println("[Session] In grace period - keeping status: " + this.status);
         }
 
-        try {
-            if (viewerScreenSocket != null) {
-                viewerScreenSocket.close();
-                System.out.println("[Session] Closed viewerScreenSocket");
-            }
-        } catch (IOException e) {
-        }
-
-        try {
-            if (viewerControlSocket != null) {
-                viewerControlSocket.close();
-                System.out.println("[Session] Closed viewerControlSocket");
-            }
-        } catch (IOException e) {
-        }
-
-        try {
-            if (viewerChatSocket != null) {
-                viewerChatSocket.close();
-                System.out.println("[Session] Closed viewerChatSocket");
-            }
-        } catch (IOException e) {
-        }
-
-        this.viewerScreenSocket = null;
-        this.viewerControlSocket = null;
-        this.viewerChatSocket = null;
-
-        System.out.println("[Session] Viewer sockets closed. Sharer still active. Waiting for reconnect...");
-    }
-
-    private void cleanup() {
-        System.out.println("[Session] Cleanup: Closing all sockets...");
-
-        try {
-            if (sharerScreenSocket != null)
-                sharerScreenSocket.close();
-        } catch (IOException e) {
-        }
-        try {
-            if (sharerControlSocket != null)
-                sharerControlSocket.close();
-        } catch (IOException e) {
-        }
-        try {
-            if (viewerScreenSocket != null)
-                viewerScreenSocket.close();
-        } catch (IOException e) {
-        }
+        // Đóng viewer sockets
         try {
             if (viewerControlSocket != null)
                 viewerControlSocket.close();
-        } catch (IOException e) {
-        }
-        try {
-            if (sharerChatSocket != null)
-                sharerChatSocket.close();
-        } catch (IOException e) {
-        }
-        try {
             if (viewerChatSocket != null)
                 viewerChatSocket.close();
         } catch (IOException e) {
+            // Ignore
+        }
+
+        this.viewerControlSocket = null;
+        this.viewerChatSocket = null;
+        this.viewerUDPInfo = null;
+        this.viewerScreenReady = false;
+
+        System.out.println("[Session] Viewer disconnected. Sharer still active.");
+    }
+
+    private void cleanup() {
+        System.out.println("[Session] Cleanup: Closing all connections...");
+
+        // Đóng tất cả TCP sockets
+        try {
+            if (sharerControlSocket != null)
+                sharerControlSocket.close();
+            if (sharerChatSocket != null)
+                sharerChatSocket.close();
+            if (viewerControlSocket != null)
+                viewerControlSocket.close();
+            if (viewerChatSocket != null)
+                viewerChatSocket.close();
+        } catch (IOException e) {
+            // Ignore
+        }
+
+        // Clear UDP info
+        sharerUDPInfo = null;
+        viewerUDPInfo = null;
+        sharerScreenReady = false;
+        viewerScreenReady = false;
+
+        System.out.println("[Session] ✓ Cleanup completed");
+    }
+
+    // ===== INNER CLASS =====
+
+    /**
+     * Lưu thông tin địa chỉ UDP của client
+     */
+    public static class UDPClientInfo {
+        public final InetAddress address;
+        public final int port;
+        public final int clientId;
+
+        public UDPClientInfo(InetAddress address, int port, int clientId) {
+            this.address = address;
+            this.port = port;
+            this.clientId = clientId;
+        }
+
+        @Override
+        public String toString() {
+            return address.getHostAddress() + ":" + port + " (clientId=" + clientId + ")";
         }
     }
 }
