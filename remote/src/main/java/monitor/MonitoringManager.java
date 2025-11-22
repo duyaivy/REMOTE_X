@@ -30,13 +30,6 @@ public class MonitoringManager {
         return instance;
     }
 
-    /**
-     * Bắt đầu monitoring với callback xử lý cảnh báo
-     * 
-     * @param screenSocket
-     * @param chatSocket
-     * @param controlSocket
-     */
     public synchronized boolean startMonitoring(Socket screenSocket, Socket chatSocket, Socket controlSocket) {
         if (isMonitoring) {
             System.out.println("[MONITOR] Already monitoring!");
@@ -55,11 +48,9 @@ public class MonitoringManager {
             tailer.start();
 
             isMonitoring = true;
-            System.out.println("Bắt đầu thu thập dữ liệu");
             return true;
 
         } catch (Exception e) {
-            System.err.println("Lỗi! " + e.getMessage());
             e.printStackTrace();
             return false;
         }
@@ -71,7 +62,6 @@ public class MonitoringManager {
         }
 
         try {
-            System.out.println("Ngừng thu thập dữ liệu...");
 
             if (tailer != null) {
                 tailer.stop();
@@ -82,10 +72,9 @@ public class MonitoringManager {
             closeSockets();
 
             isMonitoring = false;
-            System.out.println("Ngừng thu thập dữ liệu");
 
         } catch (Exception e) {
-            System.err.println("Lỗi! " + e.getMessage());
+            System.err.println(e.getMessage());
         }
     }
 
@@ -93,27 +82,24 @@ public class MonitoringManager {
         try {
             if (screenSocket != null && !screenSocket.isClosed()) {
                 screenSocket.close();
-                System.out.println("Đã đóng kết nối màn hình");
             }
         } catch (Exception e) {
-            System.err.println("Lỗi! " + e.getMessage());
+            System.err.println(e.getMessage());
         }
 
         try {
             if (chatSocket != null && !chatSocket.isClosed()) {
                 chatSocket.close();
-                System.out.println("Đã đóng kết nối chat");
             }
         } catch (Exception e) {
-            System.err.println("Lỗi! " + e.getMessage());
+            System.err.println(e.getMessage());
         }
         try {
             if (controlSocket != null && !controlSocket.isClosed()) {
                 controlSocket.close();
-                System.out.println("Đã đóng kết nối điều khiển");
             }
         } catch (Exception e) {
-            System.err.println("Lỗi! " + e.getMessage());
+            System.err.println(e.getMessage());
         }
     }
 

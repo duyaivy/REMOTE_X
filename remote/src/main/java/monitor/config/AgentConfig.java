@@ -7,11 +7,9 @@ import java.time.format.DateTimeFormatter;
 
 public class AgentConfig {
 
-    // Đường dẫn cài đặt
     public static final String INSTALL_DIR_STR = System.getenv("ProgramData") + "\\YourAppMonitor";
     public static final Path INSTALL_DIR = Paths.get(INSTALL_DIR_STR);
 
-    // Winlogbeat
     public static final String WINLOGBEAT_DIR_NAME = "winlogbeat-9.2.0-windows-x86_64";
     public static final Path WINLOGBEAT_DIR = INSTALL_DIR.resolve(WINLOGBEAT_DIR_NAME);
     public static final Path WINLOGBEAT_YML = WINLOGBEAT_DIR.resolve("winlogbeat.yml");

@@ -2,12 +2,11 @@ package server;
 
 import java.awt.Robot;
 import java.io.DataInputStream;
-import java.io.IOException; 
+import java.io.IOException;
 import java.net.Socket;
 import java.awt.event.InputEvent;
-import server.ShareScreen; 
-import javax.swing.JButton; 
-import javax.swing.SwingUtilities; 
+import javax.swing.JButton;
+import javax.swing.SwingUtilities;
 
 public class ReceiveEvent extends Thread {
     private DataInputStream dis;
@@ -17,60 +16,90 @@ public class ReceiveEvent extends Thread {
     private Socket controlSocket;
     private Socket screenSocket;
     private Socket chatSocket;
-    private JButton btnStartShare; 
-    public ReceiveEvent(Socket controlSocket, Socket screenSocket, Socket chatSocket, 
-                        Robot robot, int h, int w, JButton btnStartShare) { 
-        
+    private JButton btnStartShare;
+    private ShareScreen currentShareScreen = null;
+
+    public ReceiveEvent(Socket controlSocket, Socket screenSocket, Socket chatSocket,
+            Robot robot, int h, int w, JButton btnStartShare) {
+
         this.controlSocket = controlSocket;
         this.screenSocket = screenSocket;
         this.chatSocket = chatSocket;
         this.robot = robot;
         this.h = h;
         this.w = w;
-        
-        this.btnStartShare = btnStartShare; 
+
+        this.btnStartShare = btnStartShare;
         try {
             this.dis = new DataInputStream(this.controlSocket.getInputStream());
         } catch (Exception e) {
             e.printStackTrace();
         }
-        
-        start(); 
+
+        start();
     }
 
     @Override
     public void run() {
         try {
-            // CHỜ TÍN HIỆU "GO"
-            String signal = dis.readUTF(); 
 
-            if (signal.equals("START_SESSION")) {
-                System.out.println("ReceiveEvent (Sharer): Đã nhận tín hiệu GO! Bắt đầu ShareScreen.");
+            while (true) {
+                String data = dis.readUTF();
 
-                //  KHỞI ĐỘNG SHARESCREEN
-                new Thread(() -> {
-                    try {
-                        new ShareScreen(this.screenSocket, this.chatSocket);
-                    } catch (Exception e) {
-                        e.printStackTrace();
+                if (data.equals("START_SESSION")) {
+                    System.out.println("ReceiveEvent (Sharer): Nhận START_SESSION - Khởi động ShareScreen");
+
+                    new Thread(() -> {
+                        try {
+                            currentShareScreen = new ShareScreen(this.screenSocket, this.chatSocket);
+                        } catch (Exception e) {
+                            System.err.println("Error starting ShareScreen: " + e.getMessage());
+                            e.printStackTrace();
+                        }
+                    }).start();
+
+                    continue;
+                }
+
+                if (data.equals("RESTART_SHARESCREEN")) {
+                    System.out.println("ReceiveEvent (Sharer): Nhận RESTART_SHARESCREEN");
+
+                    if (currentShareScreen != null) {
+                        currentShareScreen.stop();
+                        System.out.println("ReceiveEvent (Sharer): Đã dừng ShareScreen cũ");
+                        Thread.sleep(500); // Đợi thread cũ dừng hoàn toàn
                     }
-                }).start();
 
-                //  BẮT ĐẦU VÒNG LẶP NHẬN SỰ KIỆN
-                System.out.println("ReceiveEvent (Sharer): Bắt đầu lắng nghe điều khiển...");
-                while (true) {
-                    String data = dis.readUTF();
+                    new Thread(() -> {
+                        try {
+                            currentShareScreen = new ShareScreen(this.screenSocket, this.chatSocket);
+                            System.out.println("ReceiveEvent (Sharer): Đã khởi động ShareScreen mới");
+                        } catch (Exception e) {
+                            System.err.println("Error restarting ShareScreen: " + e.getMessage());
+                            e.printStackTrace();
+                        }
+                    }).start();
+
+                    continue;
+                }
+
+                try {
                     String[] parts = data.split(",");
+                    if (parts.length == 0) {
+                        System.err.println("Invalid control data (empty): " + data);
+                        continue;
+                    }
+
                     int command = Integer.parseInt(parts[0]);
-                   
+
                     switch (command) {
-                        case -1: { 
+                        case -1: {
                             int buttonMask = getButtonMask(Integer.parseInt(parts[1]));
                             if (buttonMask != 0) {
                                 robot.mousePress(buttonMask);
                             }
-                            break; 
-                        } 
+                            break;
+                        }
                         case -2: {
                             int releaseMask = getButtonMask(Integer.parseInt(parts[1]));
                             if (releaseMask != 0) {
@@ -79,28 +108,23 @@ public class ReceiveEvent extends Thread {
                             break;
                         }
                         case -3: {
-                            try {
-                                int keycode = Integer.parseInt(parts[1]);
-                                if (isValidKeyCode(keycode)) {
-                                    robot.keyPress(keycode);
-                                }
-                            } catch (Exception e) {
-                                System.out.println("Invalid keycode");
+                            int keycode = Integer.parseInt(parts[1]);
+                            if (isValidKeyCode(keycode)) {
+                                robot.keyPress(keycode);
                             }
-                            break; 
+                            break;
                         }
-                        case -4: { 
-                            try {
-                                int keycode = Integer.parseInt(parts[1]);
-                                if (isValidKeyCode(keycode)) {
-                                    robot.keyRelease(keycode);
-                                }
-                            } catch (Exception e) {
-                                System.out.println("Invalid keycode");
+                        case -4: {
+                            int keycode = Integer.parseInt(parts[1]);
+                            if (isValidKeyCode(keycode)) {
+                                robot.keyRelease(keycode);
                             }
                             break;
                         }
                         case -5: {
+                            if (parts.length < 4) {
+                                break;
+                            }
                             double xRatio = Double.parseDouble(parts[2]);
                             double yRatio = Double.parseDouble(parts[3]);
                             int x = (int) (xRatio * w);
@@ -108,14 +132,18 @@ public class ReceiveEvent extends Thread {
                             robot.mouseMove(x, y);
                             break;
                         }
-                        case -6:
+                        case -6: // Mouse click
                             robot.mousePress(Integer.parseInt(parts[1]));
                             robot.mouseRelease(Integer.parseInt(parts[1]));
                             break;
-                        case -7:
+                        case -7: // Mouse wheel
                             robot.mouseWheel(Integer.parseInt(parts[1]));
                             break;
-                        case -8: {
+                        case -8: { // Mouse drag
+                            if (parts.length < 4) {
+
+                                break;
+                            }
                             double xRatio = Double.parseDouble(parts[2]);
                             double yRatio = Double.parseDouble(parts[3]);
                             int x = (int) (xRatio * w);
@@ -124,23 +152,46 @@ public class ReceiveEvent extends Thread {
                             break;
                         }
                         default:
+                            System.out.println("Unknown command: " + command);
                             break;
                     }
+                } catch (NumberFormatException e) {
+                    System.err.println("Invalid control data format (not a number): " + data);
+                } catch (ArrayIndexOutOfBoundsException e) {
+                    System.err.println("Invalid control data format (missing parts): " + data);
+                } catch (Exception e) {
+                    System.err.println("Error processing control event: " + e.getMessage());
+                    e.printStackTrace();
                 }
             }
-                   
-            else {
-                System.err.println("ReceiveEvent (Sharer): Lỗi! Tín hiệu đầu tiên không phải START_SESSION.");
-            }
+
         } catch (IOException e) {
-            System.out.println("ReceiveEvent (Sharer): Kết nối điều khiển đã đóng. (" + e.getMessage() + ")");
+            e.printStackTrace();
         } catch (Exception e) {
+
             e.printStackTrace();
         } finally {
-           
-            try { if (controlSocket != null) controlSocket.close(); } catch (IOException e) {}
-            try { if (screenSocket != null) screenSocket.close(); } catch (IOException e) {}
-            try { if (chatSocket != null) chatSocket.close(); } catch (IOException e) {}
+
+            if (currentShareScreen != null) {
+                currentShareScreen.stop();
+            }
+
+            try {
+                if (controlSocket != null)
+                    controlSocket.close();
+            } catch (IOException e) {
+            }
+            try {
+                if (screenSocket != null)
+                    screenSocket.close();
+            } catch (IOException e) {
+            }
+            try {
+                if (chatSocket != null)
+                    chatSocket.close();
+            } catch (IOException e) {
+            }
+
             SwingUtilities.invokeLater(() -> {
                 if (btnStartShare != null) {
                     btnStartShare.setEnabled(true);
@@ -153,24 +204,23 @@ public class ReceiveEvent extends Thread {
     public int getButtonMask(int button) {
         switch (button) {
             case 1:
-             return InputEvent.BUTTON1_DOWN_MASK;
+                return InputEvent.BUTTON1_DOWN_MASK;
             case 2:
-             return InputEvent.BUTTON2_DOWN_MASK;
+                return InputEvent.BUTTON2_DOWN_MASK;
             case 3:
-             return InputEvent.BUTTON3_DOWN_MASK;
-            default: return 0;
+                return InputEvent.BUTTON3_DOWN_MASK;
+            default:
+                return 0;
         }
     }
 
     private boolean isValidKeyCode(int keyCode) {
-
         if (keyCode < 0 || keyCode > 65535) {
             return false;
         }
         if (keyCode == 0) {
             return false;
         }
-
         return true;
     }
 }

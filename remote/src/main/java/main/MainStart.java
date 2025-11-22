@@ -2,6 +2,7 @@ package main;
 
 import javax.swing.*;
 import client.ReceiveScreen;
+import io.github.cdimascio.dotenv.Dotenv;
 import monitor.MonitoringManager;
 import java.awt.*;
 import java.io.DataInputStream;
@@ -449,10 +450,12 @@ public class MainStart extends JFrame {
     }
 
     public static void main(String[] args) {
-
+        Dotenv dotenv = Dotenv.configure()
+                .directory("./")
+                .ignoreIfMissing()
+                .load();
         try {
             UIManager.setLookAndFeel(UIManager.getSystemLookAndFeelClassName());
-            // UIManager.put("Button.disabledText", Color.RED);
             UIManager.put("Button.disabledText", new Color(173, 216, 230));
 
         } catch (Exception e) {
@@ -462,7 +465,7 @@ public class MainStart extends JFrame {
         SwingUtilities.invokeLater(() -> {
             try {
 
-                String ipServer = "localhost";
+                String ipServer = dotenv.get("IP_SERVER", "192.168.2.1");
                 MainStart main = new MainStart(ipServer);
                 main.setVisible(true);
             } catch (Exception e) {

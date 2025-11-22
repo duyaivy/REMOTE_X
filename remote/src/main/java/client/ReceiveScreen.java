@@ -6,7 +6,7 @@ import java.awt.*;
 import javax.imageio.ImageIO;
 import java.awt.image.BufferedImage;
 import java.io.ByteArrayInputStream;
-import java.io.DataInputStream; 
+import java.io.DataInputStream;
 import java.io.IOException;
 import java.net.Socket;
 
@@ -18,15 +18,25 @@ public class ReceiveScreen extends JFrame {
     private ChatWindow chatWindow;
 
     public ReceiveScreen(Socket dataSocket, float width, float height, Socket controlSocket, Socket chatSocket) {
-        
+
+        setTitle("RemoteX Screen Viewer");
+
         setTitle("RemoteX Screen Viewer");
 
         Dimension screenSize = Toolkit.getDefaultToolkit().getScreenSize();
+        GraphicsEnvironment ge = GraphicsEnvironment.getLocalGraphicsEnvironment();
+        GraphicsDevice gd = ge.getDefaultScreenDevice();
+        GraphicsConfiguration gc = gd.getDefaultConfiguration();
+        Insets screenInsets = Toolkit.getDefaultToolkit().getScreenInsets(gc);
+
+        int availableWidth = screenSize.width - screenInsets.left - screenInsets.right;
+        int availableHeight = screenSize.height - screenInsets.top - screenInsets.bottom;
+
         double remoteWidth = width;
         double remoteHeight = height;
 
-        double widthRatio = screenSize.width / remoteWidth;
-        double heightRatio = screenSize.height / remoteHeight;
+        double widthRatio = availableWidth / remoteWidth;
+        double heightRatio = availableHeight / remoteHeight;
         double scaleFactor = Math.min(widthRatio, heightRatio);
 
         width = (int) (remoteWidth * scaleFactor);
@@ -69,24 +79,21 @@ public class ReceiveScreen extends JFrame {
         setVisible(true);
         new Thread(() -> receiveFrames(dataSocket)).start();
 
-        // 3. Khởi động luồng GỬI điều khiển ngay
         new ControlEvent(controlSocket, screenPanel);
     }
 
     private void receiveFrames(Socket socket) {
         try (DataInputStream in = new DataInputStream(socket.getInputStream())) {
-            
-            // Dòng này sẽ "treo" lại, chờ ShareScreen (Sharer) gửi int đầu tiên
-            // (khi Sharer nhận được tín hiệu "GO!")
-            int screenWidth = in.readInt(); 
+
+            int screenWidth = in.readInt();
             int screenHeight = in.readInt();
 
             currentImage = new BufferedImage(screenWidth, screenHeight, BufferedImage.TYPE_INT_RGB);
-            statusMessage = null; 
+            statusMessage = null;
 
             while (!socket.isClosed()) {
                 boolean isFullFrame = in.readBoolean();
-                in.readInt(); 
+                in.readInt();
                 if (isFullFrame) {
                     processFullFrame(in);
                 } else {
@@ -119,7 +126,7 @@ public class ReceiveScreen extends JFrame {
             screenPanel.repaint();
         }
     }
-    
+
     private void processFullFrame(DataInputStream in) throws IOException {
         int dataLength = in.readInt();
         byte[] frameData = new byte[dataLength];
@@ -135,11 +142,12 @@ public class ReceiveScreen extends JFrame {
         int y = in.readInt();
         int width = in.readInt();
         int height = in.readInt();
+
         int dataLength = in.readInt();
         byte[] frameData = new byte[dataLength];
         in.readFully(frameData);
         BufferedImage deltaImg = ImageIO.read(new ByteArrayInputStream(frameData));
-         // Vẽ ảnh delta lên ảnh hiện tại
+
         if (currentImage != null && deltaImg != null) {
             Graphics2D g2d = currentImage.createGraphics();
             g2d.drawImage(deltaImg, x, y, null);

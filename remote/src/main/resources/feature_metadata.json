@@ -188,6 +188,11 @@
     "frombase64",
     "invoke-webrequest",
     "/c echo",
+    "--no-sandbox",
+    "--disable-web-security",
+    "--remote-debugging-port",
+    "--disable-gpu",
+    "--headless",
     "net user",
     "net localgroup",
     "whoami",
@@ -197,33 +202,12 @@
     "net share"
   ],
   "suspicious_parent_child": [
-    [
-      "winword.exe",
-      "powershell.exe"
-    ],
-    [
-      "winword.exe",
-      "cmd.exe"
-    ],
-    [
-      "excel.exe",
-      "powershell.exe"
-    ],
-    [
-      "excel.exe",
-      "cmd.exe"
-    ],
-    [
-      "outlook.exe",
-      "powershell.exe"
-    ],
-    [
-      "acrobat.exe",
-      "cmd.exe"
-    ],
-    [
-      "acrord32.exe",
-      "powershell.exe"
-    ]
+    ["winword.exe", "powershell.exe"],
+    ["winword.exe", "cmd.exe"],
+    ["excel.exe", "powershell.exe"],
+    ["excel.exe", "cmd.exe"],
+    ["outlook.exe", "powershell.exe"],
+    ["acrobat.exe", "cmd.exe"],
+    ["acrord32.exe", "powershell.exe"]
   ]
 }

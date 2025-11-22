@@ -1,4 +1,3 @@
-
 package server;
 
 import java.io.InputStream;
@@ -24,7 +23,7 @@ public class RelayThread extends Thread {
         this.outputStream = toSocket.getOutputStream();
         this.session = session;
         this.senderType = senderType;
-        
+
         System.out.println("[RelayThread] Created relay for: " + senderType);
     }
 
@@ -32,10 +31,10 @@ public class RelayThread extends Thread {
     public void run() {
         byte[] buffer = new byte[16384];
         int bytesRead;
-        
+
         String threadName = Thread.currentThread().getName();
         System.out.println("[RelayThread-" + threadName + "] Started: " + senderType + " relay");
-        
+
         try {
             while ((bytesRead = inputStream.read(buffer)) != -1) {
                 outputStream.write(buffer, 0, bytesRead);
@@ -49,9 +48,10 @@ public class RelayThread extends Thread {
             handleDisconnection();
         }
     }
-    
+
     private void handleDisconnection() {
         String threadName = Thread.currentThread().getName();
+
         // Đóng fromSocket
         try {
             if (fromSocket != null && !fromSocket.isClosed()) {
@@ -61,39 +61,40 @@ public class RelayThread extends Thread {
         } catch (Exception e) {
             System.out.println("[" + threadName + "] Error closing fromSocket: " + e.getMessage());
         }
-        
+
         if (session != null && senderType != null) {
-            // Kiểm tra xem có đang trong grace period không
+            // Kiểm tra grace period
             boolean inGracePeriod = session.isInReconnectionGracePeriod();
-            
+
             if (inGracePeriod) {
                 System.out.println("[" + threadName + "] In reconnection grace period - ignoring disconnect");
                 return;
             }
-            
-           
+
+            // Kiểm tra socket còn current không
             boolean fromSocketIsCurrent = session.isCurrentSocket(fromSocket);
             boolean toSocketIsCurrent = session.isCurrentSocket(toSocket);
-            
+
             System.out.println("[" + threadName + "] fromSocket is current: " + fromSocketIsCurrent);
             System.out.println("[" + threadName + "] toSocket is current: " + toSocketIsCurrent);
-            
-            // Nếu toSocket KHÔNG còn là socket hiện tại → Đây là reconnection
+
+            // Nếu socket không còn current → reconnection đang diễn ra
             if (!toSocketIsCurrent) {
-                System.out.println("[" + threadName + "] toSocket is OLD socket - ignoring disconnect (reconnection)");
+                System.out.println("[" + threadName + "] toSocket is OLD - ignoring disconnect (reconnection)");
                 return;
             }
-            
-            // Nếu fromSocket KHÔNG còn là socket hiện tại → Đây là reconnection
+
             if (!fromSocketIsCurrent) {
-                System.out.println("[" + threadName + "] fromSocket is OLD socket - ignoring disconnect (reconnection)");
+                System.out.println("[" + threadName + "] fromSocket is OLD - ignoring disconnect (reconnection)");
                 return;
             }
-            
+
+            // Xử lý disconnect
             if ("sharer".equals(senderType)) {
                 System.out.println("[" + threadName + "] Detected SHARER disconnect - calling onSharerDisconnect()");
                 session.onSharerDisconnect(fromSocket);
-                
+
+                // Đóng toSocket (viewer)
                 try {
                     if (toSocket != null && !toSocket.isClosed()) {
                         toSocket.close();
@@ -102,23 +103,24 @@ public class RelayThread extends Thread {
                 } catch (Exception e) {
                     System.out.println("[" + threadName + "] Error closing toSocket: " + e.getMessage());
                 }
-                
+
             } else if ("viewer".equals(senderType)) {
                 System.out.println("[" + threadName + "] Detected VIEWER disconnect - calling onViewerDisconnect()");
                 session.onViewerDisconnect(fromSocket);
-                
+
                 // KHÔNG đóng toSocket (sharer vẫn online)
                 System.out.println("[" + threadName + "] NOT closing toSocket (sharer still online)");
             }
         } else {
-            System.out.println("[" + threadName + "] No monitoring, closing both sockets");
+            System.out.println("[" + threadName + "] No session monitoring, closing both sockets");
             try {
                 if (toSocket != null && !toSocket.isClosed()) {
                     toSocket.close();
                 }
-            } catch (Exception e) {}
+            } catch (Exception e) {
+            }
         }
-        
+
         System.out.println("[" + threadName + "] handleDisconnection() completed");
     }
 }
