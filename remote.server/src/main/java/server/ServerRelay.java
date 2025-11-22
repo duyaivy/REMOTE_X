@@ -14,13 +14,10 @@ public class ServerRelay {
     private static final Map<String, Session> activeSessions = new ConcurrentHashMap<>();
 
     public static void main(String[] args) {
-        Dotenv dotenv = Dotenv.configure()
-                .directory("./")
-                .ignoreIfMissing()
-                .load();
-        int SCREEN_PORT = Integer.parseInt(dotenv.get("SCREEN_PORT", "5000"));
-        int CONTROL_PORT = Integer.parseInt(dotenv.get("CONTROL_PORT", "6000"));
-        int MESSAGES_PORT = Integer.parseInt(dotenv.get("MESSAGES_PORT", "7000"));
+
+        int SCREEN_PORT = 5002;
+        int CONTROL_PORT = 6002;
+        int MESSAGES_PORT = 7002;
         new Thread(() -> startPort(SCREEN_PORT)).start();
         new Thread(() -> startPort(CONTROL_PORT)).start();
         new Thread(() -> startPort(MESSAGES_PORT)).start();

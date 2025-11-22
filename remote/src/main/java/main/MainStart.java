@@ -147,9 +147,13 @@ public class MainStart extends JFrame {
                     protected Void doInBackground() throws Exception {
 
                         try {
-                            socketScreen = new Socket(ipServer, 5000);
-                            socketControl = new Socket(ipServer, 6000);
-                            socketChat = new Socket(ipServer, CHAT_PORT);
+                            Dotenv dotenv = Dotenv.configure()
+                                    .directory("./")
+                                    .ignoreIfMissing()
+                                    .load();
+                            socketScreen = new Socket(ipServer, Integer.parseInt(dotenv.get("SCREEN_PORT", "5002")));
+                            socketControl = new Socket(ipServer, Integer.parseInt(dotenv.get("CONTROL_PORT", "6002")));
+                            socketChat = new Socket(ipServer, Integer.parseInt(dotenv.get("CHAT_PORT", "7002")));
                             String initMessage = username + "," + password + ",sharer," + screen.getWidth() + ","
                                     + screen.getHeight();
                             DataOutputStream dosScreen = new DataOutputStream(socketScreen.getOutputStream());
@@ -358,9 +362,13 @@ public class MainStart extends JFrame {
                 protected Void doInBackground() throws Exception {
 
                     try {
-                        socketScreen = new Socket(ipServer, 5000);
-                        socketControl = new Socket(ipServer, 6000);
-                        socketChat = new Socket(ipServer, CHAT_PORT);
+                        Dotenv dotenv = Dotenv.configure()
+                                .directory("./")
+                                .ignoreIfMissing()
+                                .load();
+                        socketScreen = new Socket(ipServer, Integer.parseInt(dotenv.get("SCREEN_PORT", "5002")));
+                        socketControl = new Socket(ipServer, Integer.parseInt(dotenv.get("CONTROL_PORT", "6002")));
+                        socketChat = new Socket(ipServer, Integer.parseInt(dotenv.get("CHAT_PORT", "7002")));
                         String initMessage = partnerID + "," + partnerPassword + ",viewer," + screen.getWidth() + ","
                                 + screen.getHeight();
                         DataOutputStream dosScreen = new DataOutputStream(socketScreen.getOutputStream());
@@ -466,6 +474,7 @@ public class MainStart extends JFrame {
             try {
 
                 String ipServer = dotenv.get("IP_SERVER", "192.168.2.1");
+                System.out.println("Using server IP: " + ipServer);
                 MainStart main = new MainStart(ipServer);
                 main.setVisible(true);
             } catch (Exception e) {
