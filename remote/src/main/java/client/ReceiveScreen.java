@@ -21,30 +21,23 @@ public class ReceiveScreen extends JFrame {
 
         setTitle("RemoteX Screen Viewer");
 
-        setTitle("RemoteX Screen Viewer");
-
-        Dimension screenSize = Toolkit.getDefaultToolkit().getScreenSize();
+        // Lấy kích thước màn hình khả dụng (trừ taskbar)
         GraphicsEnvironment ge = GraphicsEnvironment.getLocalGraphicsEnvironment();
         GraphicsDevice gd = ge.getDefaultScreenDevice();
         GraphicsConfiguration gc = gd.getDefaultConfiguration();
+        Rectangle bounds = gc.getBounds();
         Insets screenInsets = Toolkit.getDefaultToolkit().getScreenInsets(gc);
 
-        int availableWidth = screenSize.width - screenInsets.left - screenInsets.right;
-        int availableHeight = screenSize.height - screenInsets.top - screenInsets.bottom;
+        // Tính toán kích thước cửa sổ (full màn hình nhưng không che taskbar)
+        int windowX = bounds.x + screenInsets.left;
+        int windowY = bounds.y + screenInsets.top;
+        int windowWidth = bounds.width - screenInsets.left - screenInsets.right;
+        int windowHeight = bounds.height - screenInsets.top - screenInsets.bottom;
 
-        double remoteWidth = width;
-        double remoteHeight = height;
-
-        double widthRatio = availableWidth / remoteWidth;
-        double heightRatio = availableHeight / remoteHeight;
-        double scaleFactor = Math.min(widthRatio, heightRatio);
-
-        width = (int) (remoteWidth * scaleFactor);
-        height = (int) (remoteHeight * scaleFactor);
-
-        setSize((int) width, (int) height);
-        setLocationRelativeTo(null);
+        // Đặt vị trí và kích thước cửa sổ
+        setBounds(windowX, windowY, windowWidth, windowHeight);
         setDefaultCloseOperation(JFrame.DISPOSE_ON_CLOSE);
+
         screenPanel = new JPanel() {
             @Override
             protected void paintComponent(Graphics g) {
@@ -57,7 +50,6 @@ public class ReceiveScreen extends JFrame {
                     g.setColor(Color.WHITE);
                     g.setFont(new Font("Arial", Font.BOLD, 18));
                     g.drawString(statusMessage, 50, 50);
-                    setResizable(false);
                 }
             }
         };
@@ -76,6 +68,7 @@ public class ReceiveScreen extends JFrame {
         toolsMenu.add(chatMenuItem);
         menuBar.add(toolsMenu);
         this.setJMenuBar(menuBar);
+
         setVisible(true);
         new Thread(() -> receiveFrames(dataSocket)).start();
 
